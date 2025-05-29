@@ -37,31 +37,14 @@ const apiMapping = {
 
 // 统计端点合并组
 const statGroups = [
-  {
-    name: "gemini,gnothink",
-    endpoints: ["/gemini", "/gnothink"]
-  },
-  {
-    name: "groq",
-    endpoints: ["/groq"]
-  },
-  {
-    name: "gmi",
-    endpoints: ["/gmi"]
-  },
-  {
-    name: "openrouter",
-    endpoints: ["/openrouter"]
-  },
-  {
-    name: "chutes",
-    endpoints: ["/chutes"]
-  },
-  {
-    name: "nebius",
-    endpoints: ["/nebius"]
-  }
+  { name: "gemini/gnothink", endpoints: ["/gemini", "/gnothink"] }, //  使用 / 分隔更清晰
+  { name: "groq", endpoints: ["/groq"] },
+  { name: "gmi", endpoints: ["/gmi"] },
+  { name: "openrouter", endpoints: ["/openrouter"] },
+  { name: "chutes", endpoints: ["/chutes"] },
+  { name: "nebius", endpoints: ["/nebius"] }
 ];
+
 // 初始化统计
 const stats = {
   total: 0,
@@ -78,9 +61,10 @@ for (const endpoint of Object.keys(apiMapping)) {
 function recordRequest(endpoint: string) {
   const now = Date.now();
   stats.total++;
-  stats.endpoints[endpoint].total++;
+  if (stats.endpoints[endpoint]) { // 确保端点存在
+    stats.endpoints[endpoint].total++;
+  }
   stats.requests.push({ endpoint, timestamp: now });
-  // 保留30天内的请求
   const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
   stats.requests = stats.requests.filter(req => req.timestamp > thirtyDaysAgo);
   updateSummaryStats();
@@ -119,7 +103,7 @@ function getGroupStats(group: {endpoints: string[]}): {today: number, week: numb
   return {today, week, month, total};
 }
 
-// 生成统计面板HTML（无图表、无说明，纯蓝色背景）
+// 生成统计表格HTML
 function generateStatsHTML(request: Request) {
   updateSummaryStats();
   return `
@@ -131,51 +115,77 @@ function generateStatsHTML(request: Request) {
   <title>API代理服务器 - 统计面板</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background: #2884fa; min-height: 100vh; padding: 20px; }
-    .container { max-width: 1200px; margin: 0 auto; }
-    .header { text-align: center; color: white; margin-bottom: 40px; }
-    .header h1 { font-size: 2.5rem; margin-bottom: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-    .header p { font-size: 1.1rem; opacity: 0.9; }
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 20px; margin-bottom: 40px; }
-    .stat-card { background: rgba(255,255,255, 0.97); border-radius: 16px; padding: 24px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06); }
-    .stat-card h3 { font-size: 1.15rem; color: #333; margin-bottom: 16px; }
-    .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
-    .stat-row:last-child { border-bottom: none; }
-    .stat-label { color: #666; font-size: .92rem; }
-    .stat-value { font-size: 1.09rem; font-weight: 600; color: #333; }
-    .api-icon { display:inline-block;width:24px;height:24px;border-radius:6px;background:#5b9cfa;color:#fff;text-align:center;line-height:24px;font-weight:bold;margin-right:8px; }
-    .total-icon { background: #2579D1; }
-    .refresh-btn { position: fixed; bottom: 30px; right: 30px; background: #2579D1; color: white; border: none; border-radius: 50px; padding: 12px 24px; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 16px rgba(37,121,209,0.15); transition: all 0.3s; z-index: 1000; }
-    .refresh-btn:hover { background: #1360af; }
-    @media (max-width: 768px) { .stats-grid { grid-template-columns: 1fr; } .header h1 { font-size: 2rem; } }
+    body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background: #2884fa; color: #333; min-height: 100vh; padding: 20px; display: flex; align-items: center; justify-content: center; }
+    .container { width: 100%; max-width: 800px; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+    .header { text-align: center; color: #1e69c5; margin-bottom: 25px; }
+    .header h1 { font-size: 2rem; margin-bottom: 8px; }
+    .header p { font-size: 0.95rem; color: #555; }
+    
+    .stats-table-container { margin-bottom: 25px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #e0e0e0; padding: 10px 12px; text-align: left; font-size: 0.9rem; }
+    th { background-color: #eaf5ff; color: #1e69c5; font-weight: 600; }
+    tbody tr:nth-child(even) { background-color: #f8f9fa; }
+    tbody tr:hover { background-color: #f1f6fb; }
+    td:nth-child(n+2), th:nth-child(n+2) { text-align: right; } /* Align numbers and their headers to the right */
+
+    .overall-stats { background: #eaf5ff; padding: 15px; border-radius: 6px; border: 1px solid #d4e9fc; }
+    .overall-stats h3 { color: #1e69c5; margin-bottom: 12px; font-size: 1.1rem; border-bottom: 1px solid #d4e9fc; padding-bottom: 8px;}
+    .overall-stats p { margin-bottom: 6px; font-size: 0.9rem; display: flex; justify-content: space-between; }
+    .overall-stats p span:first-child { color: #444; }
+    .overall-stats p span:last-child { font-weight: 600; }
+    
+    .refresh-btn { position: fixed; bottom: 20px; right: 20px; background: #1e69c5; color: white; border: none; border-radius: 6px; padding: 10px 15px; font-size: 0.85rem; cursor: pointer; box-shadow: 0 2px 8px rgba(30,105,197,0.25); transition: all 0.2s; z-index: 1000; }
+    .refresh-btn:hover { background: #165293; transform: translateY(-1px); }
+
+    @media (max-width: 768px) {
+      body { padding: 10px; display: block; } /* Allow scrolling on small screens */
+      .container { margin: 10px auto; padding: 20px; }
+      .header h1 { font-size: 1.7rem; }
+      th, td { padding: 8px; font-size: 0.85rem; }
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header"><h1>🚀 API代理服务器</h1><p>统计面板</p></div>
-    <div class="stats-grid">
-      ${
-        statGroups.map(g => {
-          const stat = getGroupStats(g);
-          // 图标为组名的首字母
-          const icon = g.name[0].toUpperCase();
-          return `
-        <div class="stat-card">
-          <h3><span class="api-icon">${icon}</span>${g.name} 统计</h3>
-          <div class="stat-row"><span class="stat-label">24小时</span><span class="stat-value">${stat.today}</span></div>
-          <div class="stat-row"><span class="stat-label">7天</span><span class="stat-value">${stat.week}</span></div>
-          <div class="stat-row"><span class="stat-label">30天</span><span class="stat-value">${stat.month}</span></div>
-          <div class="stat-row"><span class="stat-label">总计</span><span class="stat-value">${stat.total}</span></div>
-        </div>`;
-        }).join("")
-      }
-      <div class="stat-card">
-        <h3><span class="api-icon total-icon">📊</span>总体统计</h3>
-        <div class="stat-row"><span class="stat-label">总请求数</span><span class="stat-value">${stats.total}</span></div>
-        <div class="stat-row"><span class="stat-label">活跃端点</span><span class="stat-value">${Object.keys(stats.endpoints).filter(k => stats.endpoints[k].total > 0).length}</span></div>
-        <div class="stat-row"><span class="stat-label">服务状态</span><span class="stat-value" style="color:#10b981;">🟢 运行中</span></div>
-      </div>
+    
+    <div class="stats-table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>API 端点组</th>
+            <th>24小时</th>
+            <th>7天</th>
+            <th>30天</th>
+            <th>总计</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${
+            statGroups.map(g => {
+              const stat = getGroupStats(g);
+              return `
+              <tr>
+                <td>${g.name}</td>
+                <td>${stat.today}</td>
+                <td>${stat.week}</td>
+                <td>${stat.month}</td>
+                <td>${stat.total}</td>
+              </tr>`;
+            }).join("")
+          }
+        </tbody>
+      </table>
     </div>
+
+    <div class="overall-stats">
+        <h3>📊 总体统计</h3>
+        <p><span>总请求数:</span> <span>${stats.total}</span></p>
+        <p><span>活跃配置端点数:</span> <span>${Object.keys(stats.endpoints).filter(k => stats.endpoints[k].total > 0).length} / ${Object.keys(apiMapping).length}</span></p>
+        <p><span>服务状态:</span> <span style="color:#10b981;">🟢 运行中</span></p>
+    </div>
+
   </div>
   <button class="refresh-btn" onclick="location.reload()">🔄 刷新数据</button>
   <script>setInterval(() => { location.reload(); }, 60000);</script>
@@ -183,7 +193,8 @@ function generateStatsHTML(request: Request) {
 </html>`;
 }
 
-// 通用 Deno 代理服务器逻辑
+// --- Deno server logic (serve, recordRequest, apiMapping etc.) remains largely the same ---
+// ... (粘贴上一版本中从 serve(async (request) => { ... 到结尾的全部 Deno 服务器逻辑) ...
 serve(async (request) => {
   const url = new URL(request.url);
   const pathname = url.pathname;
@@ -251,7 +262,7 @@ serve(async (request) => {
         responseHeaders.set("Access-Control-Allow-Origin", "*");
       }
       responseHeaders.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH");
-      responseHeaders.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, " + allowedHeaders.join(", "));
+      responseHeaders.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, User-Agent, " + allowedHeaders.join(", "));
       responseHeaders.set("Access-Control-Max-Age", "86400");
       responseHeaders.set("X-Content-Type-Options", "nosniff");
       responseHeaders.delete("X-Frame-Options");
@@ -303,11 +314,11 @@ serve(async (request) => {
 
       return new Response(response.body, { status: response.status, headers: responseHeaders });
     } catch (error) {
+      console.error("Proxy request failed:", (error as Error).message, (error as Error).stack);
       return new Response("Proxy Request Failed: " + (error as Error).message, { status: 502 });
     }
   }
 
-  // 匹配 apiMapping 端点
   const [prefix, rest] = extractPrefixAndRest(pathname, Object.keys(apiMapping));
   if (!prefix) {
     return new Response("Not Found", { status: 404 });
@@ -318,7 +329,7 @@ serve(async (request) => {
 
   try {
     const headers = new Headers();
-    const apiHeaders = ["content-type", "authorization", "accept", "anthropic-version", "user-agent"];
+    const apiHeaders = ["content-type", "authorization", "accept", "anthropic-version", "user-agent"]; // 明确包含 user-agent
     request.headers.forEach((value, key) => {
       if (apiHeaders.includes(key.toLowerCase()) || key.toLowerCase().startsWith("x-")) {
         headers.set(key, value);
@@ -331,7 +342,6 @@ serve(async (request) => {
       headers.set("anthropic-version", "2023-06-01");
     }
 
-    // gnothink特殊处理
     let requestBody: BodyInit | null = null;
     if (prefix === "/gnothink" && request.method === "POST" && request.body && headers.get("content-type")?.includes("application/json")) {
       const originalBodyText = await request.text();
@@ -370,13 +380,14 @@ serve(async (request) => {
       headers: responseHeaders,
     });
   } catch (error) {
+    console.error("API proxy fetch failed:", error);
     return new Response("Internal Server Error during API proxy", { status: 500 });
   }
 });
 
 function extractPrefixAndRest(pathname: string, prefixes: string[]) {
   for (const prefix of prefixes) {
-    if (pathname.startsWith(prefix)) {
+    if (pathname.startsWith(prefix) && (pathname.length === prefix.length || pathname[prefix.length] === '/')) {
       return [prefix, pathname.slice(prefix.length)];
     }
   }
