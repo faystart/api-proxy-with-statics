@@ -119,7 +119,7 @@ function generateStatsHTML(request: Request) {
   const gmiStats = getEndpointStats("/gmi");
   const openrouterStats = getEndpointStats("/openrouter");
   const chutesStats = getEndpointStats("/chutes");
-  const nebiusStats = getEndpointStats("/nebius");
+  const nebiusStats = getEndpointStats("/nebius"); // 获取 Nebius 统计数据
 
   // 组合 Gemini 和 Gnothink 的统计数据用于显示
   const combinedGeminiStats = {
@@ -160,26 +160,18 @@ function generateStatsHTML(request: Request) {
         .api-icon { width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: white; }
         /* 更新或新增的 API 图标颜色 */
         .gemini-icon { background: #4285f4; } 
-        .groq-icon { background: #3d007c; } /* 新增 */
-        .gmi-icon { background: #007bff; } /* 新增 */
-        .openrouter-icon { background: #ff4733; } /* 新增 */
-        .chutes-icon { background: #009688; } /* 新增 */
-        .nebius-icon { background: #6262a0; } /* 新增 */
-        .total-icon { background: #6366f1; } /* 保持通用统计图标 */
+        .groq-icon { background: #3d007c; } 
+        .gmi-icon { background: #007bff; } 
+        .openrouter-icon { background: #ff4733; } 
+        .chutes-icon { background: #009688; } 
+        .nebius-icon { background: #6262a0; } /* 新增 Nebius 图标颜色 */
+        .total-icon { background: #6366f1; } 
 
         .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
         .stat-row:last-child { border-bottom: none; }
         .stat-label { color: #666; font-size: 0.9rem; }
         .stat-value { font-size: 1.1rem; font-weight: 600; color: #333; }
-        .usage-guide { background: rgba(255, 255, 255, 0.95); border-radius: 16px; padding: 32px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
-        .usage-guide h2 { color: #333; margin-bottom: 20px; font-size: 1.5rem; }
-        .endpoint-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin: 20px 0; }
-        .endpoint-item { background: #f8f9fa; padding: 16px; border-radius: 8px; border-left: 4px solid #6366f1; transition: all 0.3s ease; cursor: pointer; }
-        .endpoint-item:hover { background: #f1f5f9; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
-        .endpoint-path { font-weight: bold; color: #6366f1; margin-bottom: 4px; font-family: 'Courier New', monospace; }
-        .endpoint-url { font-size: 0.8rem; color: #666; word-break: break-all; font-family: 'Courier New', monospace; }
-        .example-section { margin-top: 24px; padding-top: 24px; border-top: 1px solid #eee; }
-        .example-section h3 { color: #333; margin-bottom: 12px; }
+        /* .usage-guide 样式被移除，因为整个部分被移除 */
         .code-block { background: #1a1a1a; color: #f8f8f2; padding: 16px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9rem; overflow-x: auto; margin: 12px 0; white-space: pre-wrap; word-wrap: break-word; line-height: 1.4; }
         .refresh-btn { position: fixed; bottom: 30px; right: 30px; background: #6366f1; color: white; border: none; border-radius: 50px; padding: 12px 24px; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3); transition: all 0.3s ease; z-index: 1000; }
         .refresh-btn:hover { background: #5855eb; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); }
@@ -194,7 +186,7 @@ function generateStatsHTML(request: Request) {
         .chart-info p { color: #64748b; font-size: 0.9rem; margin: 0; }
         @media (max-width: 768px) {
             .stats-grid { grid-template-columns: 1fr; }
-            .endpoint-list { grid-template-columns: 1fr; }
+            /* .endpoint-list 样式保留，但元素已移除 */
             .header h1 { font-size: 2rem; }
             .chart-grid { grid-template-columns: 1fr; }
             .chart-header { flex-direction: column; align-items: stretch; }
@@ -204,7 +196,7 @@ function generateStatsHTML(request: Request) {
 </head>
 <body>
     <div class="container">
-        <div class="header"><h1>🚀 API代理服务器</h1><p>实时统计与使用指南</p></div>
+        <div class="header"><h1>🚀 API代理服务器</h1><p>实时统计</p></div>
         
         <div class="chart-section">
             <div class="chart-header">
@@ -228,30 +220,25 @@ function generateStatsHTML(request: Request) {
             <div class="stat-card"><h3><div class="api-icon groq-icon">⚡</div>Groq API 调用统计</h3><div class="stat-row"><span class="stat-label">24小时</span><span class="stat-value">${groqStats.today}</span></div><div class="stat-row"><span class="stat-label">7天</span><span class="stat-value">${groqStats.week}</span></div><div class="stat-row"><span class="stat-label">30天</span><span class="stat-value">${groqStats.month}</span></div><div class="stat-row"><span class="stat-label">总计</span><span class="stat-value">${groqStats.total}</span></div></div>
             <div class="stat-card"><h3><div class="api-icon openrouter-icon">🔗</div>OpenRouter API 调用统计</h3><div class="stat-row"><span class="stat-label">24小时</span><span class="stat-value">${openrouterStats.today}</span></div><div class="stat-row"><span class="stat-label">7天</span><span class="stat-value">${openrouterStats.week}</span></div><div class="stat-row"><span class="stat-label">30天</span><span class="stat-value">${openrouterStats.month}</span></div><div class="stat-row"><span class="stat-label">总计</span><span class="stat-value">${openrouterStats.total}</span></div></div>
             <div class="stat-card"><h3><div class="api-icon chutes-icon">🏹</div>Chutes AI 调用统计</h3><div class="stat-row"><span class="stat-label">24小时</span><span class="stat-value">${chutesStats.today}</span></div><div class="stat-row"><span class="stat-label">7天</span><span class="stat-value">${chutesStats.week}</span></div><div class="stat-row"><span class="stat-label">30天</span><span class="stat-value">${chutesStats.month}</span></div><div class="stat-row"><span class="stat-label">总计</span><span class="stat-value">${chutesStats.total}</span></div></div>
+            <div class="stat-card"><h3><div class="api-icon nebius-icon">N</div>Nebius API 调用统计</h3><div class="stat-row"><span class="stat-label">24小时</span><span class="stat-value">${nebiusStats.today}</span></div><div class="stat-row"><span class="stat-label">7天</span><span class="stat-value">${nebiusStats.week}</span></div><div class="stat-row"><span class="stat-label">30天</span><span class="stat-value">${nebiusStats.month}</span></div><div class="stat-row"><span class="stat-label">总计</span><span class="stat-value">${nebiusStats.total}</span></div></div>
             <div class="stat-card"><h3><div class="api-icon total-icon">📊</div>总体统计</h3><div class="stat-row"><span class="stat-label">总请求数</span><span class="stat-value">${stats.total}</span></div><div class="stat-row"><span class="stat-label">活跃端点</span><span class="stat-value">${Object.keys(stats.endpoints).filter(k => stats.endpoints[k].total > 0).length}</span></div><div class="stat-row"><span class="stat-label">服务状态</span><span class="stat-value" style="color: #10b981;">🟢 运行中</span></div></div>
         </div>
         
+        <!-- 使用说明部分已移除 -->
+
+        <!-- 仅保留通用的代理模式说明和特性/安全/统计特性，无需具体API示例 -->
         <div class="usage-guide">
-            <h2>📖 使用说明</h2>
-            <h3>支持的API端点</h3>
-            <div class="endpoint-list">${Object.keys(apiMapping).map(endpoint => `<div class="endpoint-item" title="点击复制完整地址"><div class="endpoint-path">${endpoint}</div><div class="endpoint-url">${currentDomain}${endpoint}</div></div>`).join('')}</div>
-            <div class="example-section">
-                <h3>🔧 使用方法</h3><p style="margin-bottom: 16px; color: #666;">将原始API地址替换为代理地址，例如：</p>
-                <h4 style="margin: 16px 0 8px 0; color: #333;">Gemini API 示例：</h4><div class="code-block"># 原始地址\nhttps://generativelanguage.googleapis.com/v1/models\n\n# 代理地址\n${currentDomain}/gemini/v1/models</div>
-                <h4 style="margin: 16px 0 8px 0; color: #333;">Gemini NoThink API 示例：</h4><div class="code-block"># 原始地址\nhttps://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-thinking-exp:generateContent\n\n# 代理地址（自动禁用思考模式）\n${currentDomain}/gnothink/v1/models/gemini-2.0-flash-thinking-exp:generateContent</div>
-                <h4 style="margin: 16px 0 8px 0; color: #333;">Groq API 示例：</h4><div class="code-block"># 原始地址\nhttps://api.groq.com/openai/v1/chat/completions\n\n# 代理地址\n${currentDomain}/groq/v1/chat/completions</div>
-                <h4 style="margin: 16px 0 8px 0; color: #333;">OpenRouter API 示例：</h4><div class="code-block"># 原始地址\nhttps://openrouter.ai/api/v1/chat/completions\n\n# 代理地址\n${currentDomain}/openrouter/v1/chat/completions</div>
-                <h4 style="margin: 16px 0 8px 0; color: #333;">Chutes AI 示例：</h4><div class="code-block">// 原始地址: https://llm.chutes.ai/v1/complete/text
-// 代理地址: ${currentDomain}/chutes/v1/complete/text
-// 请参阅Chutes AI官方文档获取更多使用细节。</div>
-                <h4 style="margin: 16px 0 8px 0; color: #333;">cURL 示例 (以Groq为例)：</h4><div class="code-block">curl -X POST ${currentDomain}/groq/v1/chat/completions \\\n  -H "Content-Type: application/json" \\\n  -H "Authorization: Bearer YOUR_API_KEY" \\\n  -d '{\n    "model": "llama3-8b-8192",\n    "messages": [{"role": "user", "content": "Hello!"}]\n  }'</div>
-                <h4 style="margin: 16px 0 8px 0; color: #333;">Python 示例 (以OpenRouter为例)：</h4><div class="code-block">import requests\n\nurl = "${currentDomain}/openrouter/v1/chat/completions"\nheaders = {\n    "Content-Type": "application/json",\n    "Authorization": "Bearer YOUR_API_KEY",\n    "HTTP-Referer": "YOUR_DOMAIN_OR_URL", # OpenRouter要求此头\n    "X-Title": "YOUR_APP_NAME" # OpenRouter要求此头\n}\ndata = {\n    "model": "openrouter/auto",\n    "messages": [{"role": "user", "content": "Tell me a joke."}]\n}\n\nresponse = requests.post(url, headers=headers, json=data)\nprint(response.json())</div>
+            <h2>📖 代理功能说明</h2>
+            <div class="example-section" style="border-top: none; padding-top: 0;">
+                <h3>🌐 通用代理模式</h3>
+                <p style="margin-bottom: 16px; color: #666;">支持完整网页和任意HTTP(s)代理，可直接在浏览器中访问被代理的网站：</p>
+                <div class="code-block"># 代理任意网站\n${currentDomain}/proxy/https://example.com\n\n# 代理API文档\n${currentDomain}/proxy/https://platform.openai.com/docs</div>
             </div>
-            <div class="example-section"><h3>🌐 代理模式</h3><p style="margin-bottom: 16px; color: #666;">支持完整网页代理，可以直接在浏览器中访问被代理的网站：</p><div class="code-block"># 代理任意网站\n${currentDomain}/proxy/https://example.com\n\n# 代理API文档\n${currentDomain}/proxy/https://platform.openai.com/docs</div></div>
-            <div class="example-section"><h3>⚡ 特性</h3><ul style="margin-left: 20px; color: #666; line-height: 1.6;"><li>✅ 支持所有HTTP方法 (GET, POST, PUT, DELETE等)</li><li>✅ 自动转发请求头和响应头</li><li>✅ 支持CORS跨域请求</li><li>✅ 实时统计API调用次数</li><li>✅ 代理模式支持完整网页浏览</li><li>✅ 自动获取当前域名，无需手动配置</li><li>✅ 组合图表展示调用统计和趋势</li><li>✅ Gemini NoThink模式：自动为Gemini请求添加thinkingBudget: 0禁用思考模式</li><li>✅ **新增：随机User-Agent功能，增强匿名性**</li></ul></div>
+            <div class="example-section"><h3>⚡ 通用特性</h3><ul style="margin-left: 20px; color: #666; line-height: 1.6;"><li>✅ 支持所有HTTP方法 (GET, POST, PUT, DELETE等)</li><li>✅ 自动转发请求头和响应头</li><li>✅ 支持CORS跨域请求</li><li>✅ 实时统计API调用次数</li><li>✅ 代理模式支持完整网页浏览</li><li>✅ 自动获取当前域名，无需手动配置</li><li>✅ 组合图表展示调用统计和趋势</li><li>✅ Gemini NoThink模式：自动为Gemini请求添加thinkingBudget: 0禁用思考模式</li><li>✅ **随机User-Agent功能，增强匿名性**</li></ul></div>
             <div class="example-section"><h3>🔒 安全特性</h3><ul style="margin-left: 20px; color: #666; line-height: 1.6;"><li>🛡️ 设置安全响应头 (X-Frame-Options, X-Content-Type-Options等)</li><li>🛡️ 过滤和转发指定的请求头</li><li>🛡️ 禁止搜索引擎爬取 (robots.txt)</li><li>🛡️ 自动处理CORS预检请求</li></ul></div>
-            <div class="example-section"><h3>📊 统计功能</h3><ul style="margin-left: 20px; color: #666; line-height: 1.6;"><li>📈 实时统计API调用次数</li><li>📈 支持多时间维度统计（24h/7d/30d/总计）</li><li>📈 重点监控现有API使用量</li><li>📈 提供JSON格式统计API: <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${currentDomain}/stats</code></li><li>📈 组合图表展示，柱状图+折线图显示数据和趋势</li></ul></div>
+            <div class="example-section"><h3>📊 统计功能</h3><ul style="margin-left: 20px; color: #666; line-height: 1.6;"><li>📈 实时统计API调用次数</li><li>📈 支持多时间维度统计（24h/7d/30d/总计）</li><li>📈 重点监控所有配置的API使用量</li><li>📈 提供JSON格式统计API: <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${currentDomain}/stats</code></li><li>📈 组合图表展示，柱状图+折线图显示数据和趋势</li></ul></div>
         </div>
+
     </div>
     <button class="refresh-btn" onclick="location.reload()">🔄 刷新数据</button>
     <div id="toast" class="toast"></div>
@@ -322,7 +309,7 @@ function generateStatsHTML(request: Request) {
         }
 
         function createCombinedChart(period) {
-            const ctx = document.getElementById('apiChart').getContext('2d');
+            const ctx = document.getElementById('apiChart')!.getContext('2d'); // Add non-null assertion
             if (chartInstance) chartInstance.destroy();
             
             const chartData = getChartDataForPeriod(period, rawStatsData.requests, rawStatsData.endpoints);
@@ -424,6 +411,7 @@ function generateStatsHTML(request: Request) {
 
         function updateLegend(period, chartData) {
             const legendContainer = document.getElementById('chartLegend');
+            if (!legendContainer) return; // Add null check for legend container
             legendContainer.innerHTML = ''; // Clear previous legend
 
             if (chartData.labels.length === 0) {
@@ -452,17 +440,21 @@ function generateStatsHTML(request: Request) {
                     '<div class="legend-item">' +
                         '<div class="legend-line" style="background-color: #ef4444"></div>' +
                         '<span>调用趋势 (折线)</span>' +
-                    '</div>' +
+                        '</div>' +
                     '<p style="font-size: 0.85rem; color: #666; margin-top: 10px;">' +
                         '显示过去 ' + periodText + ' 的总调用数据。' +
-                    '</p>';
+                        '</p>';
             }
         }
 
         function switchPeriod(newPeriod) {
             currentPeriod = newPeriod;
             document.querySelectorAll('.time-tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelector('[data-period="' + newPeriod + '"]')!.classList.add('active'); // Add non-null assertion
+            // Use querySelector by data-period attribute
+            const activeTab = document.querySelector('[data-period="' + newPeriod + '"]');
+            if (activeTab) { // Check if element exists before adding class
+                activeTab.classList.add('active');
+            }
             createCombinedChart(currentPeriod);
         }
 
@@ -470,12 +462,13 @@ function generateStatsHTML(request: Request) {
 
         function showToast(message) {
             const toast = document.getElementById('toast');
-            if (toast) { // Check if toast element exists
+            if (toast) { 
                 toast.textContent = message; toast.classList.add('show');
                 setTimeout(() => { toast.classList.remove('show'); }, 3000);
             }
         }
 
+        // 复制到剪贴板功能，此处已不再需要 endpoint-item 的点击事件，因为该HTML元素已移除
         function copyToClipboard(text) {
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(text).then(() => showToast('已复制: ' + text), () => fallbackCopy(text));
@@ -492,20 +485,9 @@ function generateStatsHTML(request: Request) {
         document.addEventListener('DOMContentLoaded', function() {
             createCombinedChart(currentPeriod);
             document.querySelectorAll('.time-tab').forEach(tab => {
-                tab.addEventListener('click', function() { switchPeriod(this.dataset.period!); }); // Add non-null assertion
+                tab.addEventListener('click', function() { switchPeriod(this.dataset.period!); }); 
             });
-            document.querySelectorAll('.endpoint-item').forEach(item => {
-                item.addEventListener('click', function() {
-                    const urlElement = this.querySelector('.endpoint-url');
-                    const url = urlElement ? urlElement.textContent?.trim() : ''; // Safely get text content
-                    if (url) {
-                        copyToClipboard(url);
-                        const originalBg = this.style.backgroundColor, originalBorder = this.style.borderLeftColor;
-                        this.style.backgroundColor = '#dcfce7'; this.style.borderLeftColor = '#16a34a';
-                        setTimeout(() => { this.style.backgroundColor = originalBg; this.style.borderLeftColor = originalBorder; }, 1000);
-                    }
-                });
-            });
+            // 移除了 endpoint-item 的点击事件处理，因为该HTML元素已移除
         });
     </script>
 </body>
