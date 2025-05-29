@@ -139,7 +139,8 @@ function generateStatsHTML(request: Request) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        /* 页面背景改为绿色渐变 */
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); min-height: 100vh; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; }
         .header { text-align: center; color: white; margin-bottom: 40px; }
         .header h1 { font-size: 2.5rem; margin-bottom: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
@@ -171,8 +172,12 @@ function generateStatsHTML(request: Request) {
         .stat-row:last-child { border-bottom: none; }
         .stat-label { color: #666; font-size: 0.9rem; }
         .stat-value { font-size: 1.1rem; font-weight: 600; color: #333; }
-        /* .usage-guide 样式被移除，因为整个部分被移除 */
-        .code-block { background: #1a1a1a; color: #f8f8f2; padding: 16px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9rem; overflow-x: auto; margin: 12px 0; white-space: pre-wrap; word-wrap: break-word; line-height: 1.4; }
+
+        /* 移除原有的 .usage-guide, .code-block, .example-section 样式 */
+        /* .usage-guide 样式已移除 */
+        /* .code-block 样式已移除 */
+        /* .example-section 样式已移除 */
+
         .refresh-btn { position: fixed; bottom: 30px; right: 30px; background: #6366f1; color: white; border: none; border-radius: 50px; padding: 12px 24px; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3); transition: all 0.3s ease; z-index: 1000; }
         .refresh-btn:hover { background: #5855eb; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); }
         .toast { position: fixed; top: 20px; right: 20px; background: #10b981; color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; z-index: 1001; opacity: 0; transform: translateX(100%); transition: all 0.3s ease; }
@@ -182,11 +187,10 @@ function generateStatsHTML(request: Request) {
         .legend-color { width: 12px; height: 12px; border-radius: 2px; }
         .legend-line { width: 16px; height: 3px; border-radius: 2px; }
         .no-data { text-align: center; color: #64748b; font-style: italic; padding: 40px 0; }
-        .chart-info { background: #f8fafc; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #6366f1; }
-        .chart-info p { color: #64748b; font-size: 0.9rem; margin: 0; }
+        /* 移除 .chart-info 样式，因为相关HTML元素已被移除 */
+        /* .chart-info 样式已移除 */
         @media (max-width: 768px) {
             .stats-grid { grid-template-columns: 1fr; }
-            /* .endpoint-list 样式保留，但元素已移除 */
             .header h1 { font-size: 2rem; }
             .chart-grid { grid-template-columns: 1fr; }
             .chart-header { flex-direction: column; align-items: stretch; }
@@ -208,7 +212,7 @@ function generateStatsHTML(request: Request) {
                     <button class="time-tab" data-period="total">总计</button>
                 </div>
             </div>
-            <div class="chart-info"><p>📊 组合图表：蓝色柱状图显示总API调用次数，红色折线图显示总体调用趋势。选择上方时间范围查看不同维度数据。</p></div>
+            <!-- 移除组合图表的说明 -->
             <div class="chart-grid">
                 <div class="chart-container"><canvas id="apiChart"></canvas></div>
                 <div><div class="chart-legend" id="chartLegend"></div></div>
@@ -224,20 +228,7 @@ function generateStatsHTML(request: Request) {
             <div class="stat-card"><h3><div class="api-icon total-icon">📊</div>总体统计</h3><div class="stat-row"><span class="stat-label">总请求数</span><span class="stat-value">${stats.total}</span></div><div class="stat-row"><span class="stat-label">活跃端点</span><span class="stat-value">${Object.keys(stats.endpoints).filter(k => stats.endpoints[k].total > 0).length}</span></div><div class="stat-row"><span class="stat-label">服务状态</span><span class="stat-value" style="color: #10b981;">🟢 运行中</span></div></div>
         </div>
         
-        <!-- 使用说明部分已移除 -->
-
-        <!-- 仅保留通用的代理模式说明和特性/安全/统计特性，无需具体API示例 -->
-        <div class="usage-guide">
-            <h2>📖 代理功能说明</h2>
-            <div class="example-section" style="border-top: none; padding-top: 0;">
-                <h3>🌐 通用代理模式</h3>
-                <p style="margin-bottom: 16px; color: #666;">支持完整网页和任意HTTP(s)代理，可直接在浏览器中访问被代理的网站：</p>
-                <div class="code-block"># 代理任意网站\n${currentDomain}/proxy/https://example.com\n\n# 代理API文档\n${currentDomain}/proxy/https://platform.openai.com/docs</div>
-            </div>
-            <div class="example-section"><h3>⚡ 通用特性</h3><ul style="margin-left: 20px; color: #666; line-height: 1.6;"><li>✅ 支持所有HTTP方法 (GET, POST, PUT, DELETE等)</li><li>✅ 自动转发请求头和响应头</li><li>✅ 支持CORS跨域请求</li><li>✅ 实时统计API调用次数</li><li>✅ 代理模式支持完整网页浏览</li><li>✅ 自动获取当前域名，无需手动配置</li><li>✅ 组合图表展示调用统计和趋势</li><li>✅ Gemini NoThink模式：自动为Gemini请求添加thinkingBudget: 0禁用思考模式</li><li>✅ **随机User-Agent功能，增强匿名性**</li></ul></div>
-            <div class="example-section"><h3>🔒 安全特性</h3><ul style="margin-left: 20px; color: #666; line-height: 1.6;"><li>🛡️ 设置安全响应头 (X-Frame-Options, X-Content-Type-Options等)</li><li>🛡️ 过滤和转发指定的请求头</li><li>🛡️ 禁止搜索引擎爬取 (robots.txt)</li><li>🛡️ 自动处理CORS预检请求</li></ul></div>
-            <div class="example-section"><h3>📊 统计功能</h3><ul style="margin-left: 20px; color: #666; line-height: 1.6;"><li>📈 实时统计API调用次数</li><li>📈 支持多时间维度统计（24h/7d/30d/总计）</li><li>📈 重点监控所有配置的API使用量</li><li>📈 提供JSON格式统计API: <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${currentDomain}/stats</code></li><li>📈 组合图表展示，柱状图+折线图显示数据和趋势</li></ul></div>
-        </div>
+        <!-- 移除所有代理功能说明部分 -->
 
     </div>
     <button class="refresh-btn" onclick="location.reload()">🔄 刷新数据</button>
@@ -487,7 +478,6 @@ function generateStatsHTML(request: Request) {
             document.querySelectorAll('.time-tab').forEach(tab => {
                 tab.addEventListener('click', function() { switchPeriod(this.dataset.period!); }); 
             });
-            // 移除了 endpoint-item 的点击事件处理，因为该HTML元素已移除
         });
     </script>
 </body>
