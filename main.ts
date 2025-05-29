@@ -33,7 +33,7 @@ const apiMapping = {
   '/gmi': 'https://api.gmi-serving.com',
   '/openrouter': 'https://openrouter.ai/api',
   '/chutes': 'https://llm.chutes.ai',
-  '/nebius':'https://api.studio.nebius.com'
+  '/nebius': 'https://api.studio.nebius.com'
 };
 
 // Stats storage
