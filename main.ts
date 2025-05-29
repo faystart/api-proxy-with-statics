@@ -7,7 +7,7 @@ const apiMapping = {
   "/gmi": "https://api.gmi-serving.com",
   "/openrouter": "https://openrouter.ai/api",
   "/chutes": "https://llm.chutes.ai",
-  "/nebius": "https://api.studio.nebius.com" // 新增的 nebius 端点
+  "/nebius": "https://api.studio.nebius.com"
 };
 
 const userAgents = [
@@ -22,90 +22,23 @@ const userAgents = [
   "Mozilla/5.0 (WebOS/2.2.4; U; en-US) AppleWebKit/534.6 (KHTML, like Gecko) Safari/534.6 Pre/1.0",
   "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
   "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
-  "curl/8.4.0", // 示例版本
-  "Wget/1.21.3", // 示例版本
-  "Python-urllib/3.11", // 示例版本
-  "Go-http-client/1.1" // Go 默认的 UA 格式
+  "curl/8.4.0",
+  "Wget/1.21.3",
+  "Python-urllib/3.11",
+  "Go-http-client/1.1"
 ];
 
 function getRandomUserAgent() {
   return userAgents[Math.floor(Math.random() * userAgents.length)];
 }
 
-// Stats storage
-const stats = {
-  total: 0,
-  endpoints: {} as Record<string, { total: number; today: number; week: number; month: number }>,
-  requests: [] as Array<{ endpoint: string; timestamp: number }>
-};
-
-// Initialize stats for all endpoints in apiMapping
-for (const endpoint of Object.keys(apiMapping)) {
-  stats.endpoints[endpoint] = {
-    total: 0,
-    today: 0,
-    week: 0,
-    month: 0
-  };
-}
-
-function recordRequest(endpoint: string) {
-  const now = Date.now();
-  stats.total++;
-  // Ensure the endpoint exists in stats before trying to increment
-  if (stats.endpoints[endpoint]) {
-    stats.endpoints[endpoint].total++;
-  } else {
-    // This case should ideally not happen if initialized correctly for all apiMapping keys
-    console.warn(`Endpoint ${endpoint} not found in stats.endpoints during recordRequest. Initializing now.`);
-    stats.endpoints[endpoint] = { total: 1, today: 0, week: 0, month: 0 };
-  }
-  stats.requests.push({ endpoint, timestamp: now });
-
-  const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
-  stats.requests = stats.requests.filter(req => req.timestamp > thirtyDaysAgo);
-
-  updateSummaryStats();
-}
-
-function updateSummaryStats() {
-  const now = Date.now();
-  const oneDayAgo = now - (24 * 60 * 60 * 1000);
-  const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
-  const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000); // For clarity, though filtered
-
-  for (const endpointKey of Object.keys(stats.endpoints)) {
-    stats.endpoints[endpointKey].today = 0;
-    stats.endpoints[endpointKey].week = 0;
-    stats.endpoints[endpointKey].month = 0;
-  }
-
-  for (const req of stats.requests) {
-    const endpointStats = stats.endpoints[req.endpoint];
-    if (!endpointStats) continue;
-
-    if (req.timestamp > oneDayAgo) {
-      endpointStats.today++;
-    }
-    if (req.timestamp > sevenDaysAgo) {
-      endpointStats.week++;
-    }
-    if (req.timestamp > thirtyDaysAgo) { // Will be true due to cleanup
-      endpointStats.month++;
-    }
-  }
-}
-
-function generateStatsHTML(request: Request) {
-  updateSummaryStats(); // Ensure summary stats are up-to-date
-
+function generateSimplifiedHTML(request: Request) {
   const url = new URL(request.url);
   const currentDomain = `${url.protocol}//${url.host}`;
 
-  // Calculate totals for the summary row in the table
-  const totalToday = Object.values(stats.endpoints).reduce((sum, s) => sum + s.today, 0);
-  const totalWeek = Object.values(stats.endpoints).reduce((sum, s) => sum + s.week, 0);
-  const totalMonth = Object.values(stats.endpoints).reduce((sum, s) => sum + s.month, 0);
+  // Check if '/openai' exists in apiMapping for the example
+  const openaiExampleTarget = apiMapping["/openai"] ? `${currentDomain}/openai/v1/chat/completions` : `(请先在 apiMapping 中配置 /openai 端点)`;
+  const openaiOriginalExample = apiMapping["/openai"] ? `https://api.openai.com/v1/chat/completions` : `(示例原始OpenAI API)`;
 
   return `
 <!DOCTYPE html>
@@ -113,7 +46,7 @@ function generateStatsHTML(request: Request) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API代理服务器 - 统计面板</title>
+    <title>API代理服务器</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -121,178 +54,108 @@ function generateStatsHTML(request: Request) {
             background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); /* Blue gradient background */
             min-height: 100vh; 
             padding: 20px; 
-            color: #fff; /* Default text color to white for better contrast on blue */
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
         }
         .container { 
-            max-width: 900px; /* Adjusted width for simpler content */
-            margin: 40px auto; /* Added more top margin */
-            background: rgba(255, 255, 255, 0.1); /* Semi-transparent white card */
+            max-width: 700px; /* Slightly wider for better readability of list */
+            margin: 20px auto;
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 16px;
-            padding: 24px;
+            padding: 30px 40px; /* More padding */
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.18);
         }
-        .header { text-align: center; margin-bottom: 30px; }
-        .header h1 { font-size: 2.2rem; margin-bottom: 8px; text-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-        .header p { font-size: 1rem; opacity: 0.9; }
-        
-        .stats-table-container { margin-bottom: 30px; }
-        .stats-table-container h2 {
-            font-size: 1.6rem;
-            color: #fff; /* White title */
-            margin-bottom: 20px;
-            text-align: center;
-            border-bottom: 2px solid rgba(255,255,255,0.3);
-            padding-bottom: 10px;
+        h1 { 
+            font-size: 2.2rem; 
+            margin-bottom: 15px; 
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: rgba(255, 255, 255, 0.15); /* Slightly more opaque for table */
-            border-radius: 8px;
-            overflow: hidden; /* To make border-radius work on table */
+        p { 
+            font-size: 1.1rem; 
+            opacity: 0.95; 
+            margin-bottom: 25px;
+            line-height: 1.6;
         }
-        th, td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            color: #f0f0f0; /* Light grey text for table content */
-        }
-        th {
-            background-color: rgba(0, 0, 0, 0.1); /* Darker shade for header */
-            font-weight: 600;
-            color: #fff; /* White text for table headers */
-        }
-        tbody tr:last-child td {
-            border-bottom: none;
-        }
-        tbody tr:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-        td:first-child { font-weight: 500; }
-        td strong { color: #fff; } /* Make total values stand out */
-
-        .info-section {
-            text-align: center;
+        h3 {
+            font-size: 1.3rem;
             margin-top: 20px;
-            padding: 15px;
-            background: rgba(0,0,0,0.1);
-            border-radius: 8px;
-        }
-        .info-section p {
-            margin: 5px 0;
-            font-size: 0.9rem;
+            margin-bottom: 15px;
             color: #e0e0e0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 8px;
         }
-        .info-section code {
-            background: rgba(0,0,0,0.2);
-            padding: 3px 6px;
-            border-radius: 4px;
+        .endpoints-list { 
+            list-style: none; 
+            padding: 0; 
+            margin-bottom: 25px;
+            text-align: left; /* Align list items to left */
+        }
+        .endpoints-list li { 
+            background: rgba(255,255,255,0.08); 
+            padding: 10px 15px; 
+            margin-bottom: 10px; 
+            border-radius: 6px;
             font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+            color: #f0f0f0;
+            word-break: break-all;
+        }
+        .endpoints-list li strong {
             color: #fff;
         }
-
-        .refresh-btn { 
-            position: fixed; bottom: 20px; right: 20px; 
-            background: #ffc107; /* A contrasting yellow/orange */
-            color: #333; 
-            border: none; border-radius: 50px; padding: 10px 20px; 
-            font-size: 0.9rem; font-weight: bold; cursor: pointer; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
-            transition: all 0.3s ease; z-index: 1000; 
+        .usage-example {
+            font-size: 0.95rem;
+            color: #e0e0e0;
+            background: rgba(0,0,0,0.15);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: left;
+            line-height: 1.7;
         }
-        .refresh-btn:hover { background: #e0a800; transform: translateY(-2px); }
-        
-        .toast { 
-            position: fixed; top: 20px; right: 20px; 
-            background: #28a745; /* Green for success */
-            color: white; padding: 10px 18px; border-radius: 6px; 
-            font-size: 0.9rem; z-index: 1001; opacity: 0; 
-            transform: translateX(100%); transition: all 0.3s ease; 
+        .usage-example code {
+            color: #ffdd57; /* Brighter yellow for code */
+            background: rgba(0,0,0,0.2);
+            padding: 2px 5px;
+            border-radius: 4px;
         }
-        .toast.show { opacity: 1; transform: translateX(0); }
-
-        @media (max-width: 768px) {
-            .container { margin: 20px; padding: 15px; }
-            .header h1 { font-size: 1.8rem; }
-            th, td { padding: 10px 8px; font-size: 0.9rem; }
+        .status-ok {
+            color: #28a745; /* Green for OK status */
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🚀 API代理服务器</h1>
-            <p>实时统计面板</p>
-        </div>
+        <h1>🚀 API代理服务器</h1>
+        <p>服务正在 <span class="status-ok">运行中</span>。该代理转发请求到配置的目标API。</p>
         
-        <div class="stats-table-container">
-            <h2>📊 API 调用统计</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>API 端点</th>
-                        <th>24小时</th>
-                        <th>7天</th>
-                        <th>30天</th>
-                        <th>总计</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${Object.keys(apiMapping).map(endpointKey => {
-                        const endpointStats = stats.endpoints[endpointKey] || { today: 0, week: 0, month: 0, total: 0 };
-                        return `
-                        <tr>
-                            <td>${endpointKey}</td>
-                            <td>${endpointStats.today}</td>
-                            <td>${endpointStats.week}</td>
-                            <td>${endpointStats.month}</td>
-                            <td>${endpointStats.total}</td>
-                        </tr>`;
-                    }).join('')}
-                    <tr>
-                        <td><strong>总计 (所有定义端点)</strong></td>
-                        <td><strong>${totalToday}</strong></td>
-                        <td><strong>${totalWeek}</strong></td>
-                        <td><strong>${totalMonth}</strong></td>
-                        <td><strong>${stats.total}</strong></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="info-section">
-             <p>当前活动端点数: ${Object.keys(stats.endpoints).filter(k => stats.endpoints[k].total > 0).length} / ${Object.keys(apiMapping).length}</p>
-             <p>服务状态: <span style="color: #28a745; font-weight: bold;">🟢 运行中</span></p>
-             <p>统计API: <code>${currentDomain}/stats</code> (JSON)</p>
-        </div>
+        <h3>可用代理路径及目标:</h3>
+        <ul class="endpoints-list">
+            ${Object.entries(apiMapping).map(([prefix, target]) => 
+                `<li><strong>${currentDomain}${prefix}</strong>  ➔  ${target}</li>`
+            ).join('')}
+        </ul>
 
+        <div class="usage-example">
+            <p><strong>使用方法:</strong></p>
+            <p>将您的客户端配置为使用本代理服务器的地址，并带上相应的路径前缀。</p>
+            <p>例如，如果您的原始 OpenAI API 请求是:</p>
+            <p><code>${openaiOriginalExample}</code></p>
+            <p>通过此代理，您应该使用:</p>
+            <p><code>${openaiExampleTarget}</code></p>
+            <p> (确保 <code>/openai</code> 映射到 <code>https://api.openai.com</code> 在服务器端的 <code>apiMapping</code> 配置中)</p>
+            <p>所有请求头 (如 Authorization) 和请求体将被转发。</p>
+        </div>
     </div>
-    <button class="refresh-btn" onclick="location.reload()">🔄 刷新数据</button>
-    <div id="toast" class="toast"></div>
-    
     <script>
-        // Simplified JS: Only toast and auto-refresh remain relevant from original complex script
-        setInterval(() => { 
-            // console.log('Auto-reloading page for fresh stats...');
-            location.reload(); 
-        }, 60000); // Refresh every 60 seconds
-
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message; toast.classList.add('show');
-            setTimeout(() => { toast.classList.remove('show'); }, 3000);
-        }
-
-        // Fallback copy function (if needed, but elements to copy are now removed from this page)
-        // function fallbackCopy(text) { ... } 
-        // function copyToClipboard(text) { ... }
-
-        // No chart or complex DOM manipulation needed here anymore.
-        // The /stats endpoint link is provided as text.
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log("统计页面加载完成。数据每分钟自动刷新。");
-        });
+         // 页面内容是静态的，自动刷新意义不大。
+         // setInterval(() => { location.reload(); }, 300000); // 例如，每5分钟刷新一次，如果需要
+         console.log("API 代理服务页面已加载。");
     </script>
 </body>
 </html>`;
@@ -303,7 +166,7 @@ serve(async (request: Request) => {
   const pathname = url.pathname;
 
   if (pathname === "/" || pathname === "/index.html") {
-    return new Response(generateStatsHTML(request), {
+    return new Response(generateSimplifiedHTML(request), {
       status: 200,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
@@ -316,18 +179,8 @@ serve(async (request: Request) => {
     });
   }
 
-  if (pathname === "/stats") {
-    updateSummaryStats();
-    return new Response(JSON.stringify(stats, null, 2), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
-      },
-    });
-  }
+  // Removed /stats API endpoint completely
 
-  // Proxy mode logic remains, but make sure to use random UA if not provided
   if (pathname.startsWith("/proxy/")) {
     try {
       const proxyPathIndex = url.pathname.indexOf("/proxy/");
@@ -346,7 +199,7 @@ serve(async (request: Request) => {
           headers.set(key, value);
         }
       });
-      if (!headers.has("user-agent")) { // Add random UA if not present
+      if (!headers.has("user-agent")) {
         headers.set("user-agent", getRandomUserAgent());
       }
       if (request.headers.has("referer")) {
@@ -396,9 +249,7 @@ serve(async (request: Request) => {
         let text = await response.text();
         const currentProxyBase = `${url.origin}/proxy/`;
         text = text.replace(/(href|src|action)=["']\/(?!\/)/gi, `$1="${currentProxyBase}${baseUrl}/`);
-        text = text.replace(/(href|src|action)=["'](https?:\/\/[^"']+)/gi, (match, attr, originalUrl) => {
-            return `${attr}="${currentProxyBase}${originalUrl}"`;
-        });
+        text = text.replace(/(href|src|action)=["'](https?:\/\/[^"']+)/gi, (match, attr, originalUrl) => `${attr}="${currentProxyBase}${originalUrl}"`);
         text = text.replace(/srcset=["']([^"']+)["']/gi, (match, srcset) => {
             const newSrcset = srcset.split(',').map(s => {
                 const parts = s.trim().split(/\s+/);
@@ -427,7 +278,6 @@ serve(async (request: Request) => {
         });
         return new Response(text, { status: response.status, headers: responseHeaders });
       }
-
       return new Response(response.body, { status: response.status, headers: responseHeaders });
     } catch (error) {
       console.error("Proxy request failed:", error.message, error.stack);
@@ -437,10 +287,10 @@ serve(async (request: Request) => {
 
   const [prefix, rest] = extractPrefixAndRest(pathname, Object.keys(apiMapping));
   if (!prefix) {
-    return new Response("Not Found", { status: 404 });
+    return new Response("Not Found: The requested path does not match any configured API prefixes.", { status: 404 });
   }
 
-  recordRequest(prefix);
+  // No longer calling recordRequest(prefix);
   const targetApiUrl = `${apiMapping[prefix]}${rest}${url.search}`;
 
   try {
@@ -456,7 +306,7 @@ serve(async (request: Request) => {
         headers.set("anthropic-version", "2023-06-01");
     }
     
-    if (!headers.has("user-agent")) { // Add random UA if not present
+    if (!headers.has("user-agent")) {
         headers.set("user-agent", getRandomUserAgent());
     }
 
@@ -466,16 +316,11 @@ serve(async (request: Request) => {
       if (originalBodyText) {
         try {
             const bodyJson = JSON.parse(originalBodyText);
-            bodyJson.generationConfig = {
-              ...(bodyJson.generationConfig || {}),
-              thinkingConfig: {
-                thinkingBudget: 0
-              }
-            };
+            bodyJson.generationConfig = { ...(bodyJson.generationConfig || {}), thinkingConfig: { thinkingBudget: 0 }};
             requestBody = JSON.stringify(bodyJson);
         } catch (e) {
             console.error("Failed to parse body for /gnothink, proxying as is.", e);
-            requestBody = originalBodyText; // Send original if parsing fails
+            requestBody = originalBodyText;
         }
       } else {
         requestBody = null;
@@ -494,7 +339,6 @@ serve(async (request: Request) => {
     responseHeaders.set("Access-Control-Allow-Origin", "*");
     responseHeaders.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH");
     responseHeaders.set("Access-Control-Allow-Headers", "Content-Type, Authorization, anthropic-version, " + commonApiHeaders.join(", "));
-    
     responseHeaders.set("X-Content-Type-Options", "nosniff");
     responseHeaders.set("X-Frame-Options", "DENY");
     responseHeaders.set("Referrer-Policy", "no-referrer");
@@ -508,8 +352,8 @@ serve(async (request: Request) => {
       headers: responseHeaders,
     });
   } catch (error) {
-    console.error("API proxy fetch failed for prefix " + prefix + ":", error);
-    return new Response("Internal Server Error during API proxy", { status: 500 });
+    console.error(`API proxy fetch failed for prefix "${prefix}" to target "${targetApiUrl}":`, error);
+    return new Response(`Internal Server Error during API proxy for ${prefix}. Details: ${error.message}`, { status: 500 });
   }
 });
 
@@ -523,5 +367,6 @@ function extractPrefixAndRest(pathname: string, prefixes: string[]): [string | n
 }
 
 console.log("🚀 API代理服务器已启动 (Deno)");
-console.log("📄 统计页面每分钟自动刷新");
-console.log("🔧 支持的端点:", Object.keys(apiMapping).join(", "));
+console.log("ℹ️ 服务器仅提供API转发功能，已移除所有统计。");
+console.log("🔧 支持的端点前缀:", Object.keys(apiMapping).join(", "));
+console.log(`🌐 主页可访问以查看可用端点列表和基本使用说明。`);
