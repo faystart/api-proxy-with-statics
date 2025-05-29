@@ -22,7 +22,9 @@ const apiMapping = {
   "/openrouter": "https://openrouter.ai/api",
   // 额外添加 code 1 中的一些映射（可选，根据需求保留或删除）
   "/gmi": "https://api.gmi-serving.com", 
-  "/chutes": "https://llm.chutes.ai"
+  "/chutes": "https://llm.chutes.ai",
+  "/nebius":"https://api.studio.nebius.com"
+};
 };
 
 /**
