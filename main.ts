@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std/http/server.ts";
 
-// 用户代理列表
 const userAgents = [
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15",
@@ -9,77 +8,72 @@ const userAgents = [
   "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
   "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:102.0) Gecko/20100101 Firefox/102.0",
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:102.0) Gecko/20100101 Firefox/102.0",
-  "Mozilla/5.0 (iPad; CPU OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+  "Mozilla/5.0 (iPad; CPU OS極使用 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
   "Mozilla/5.0 (WebOS/2.2.4; U; en-US) AppleWebKit/534.6 (KHTML, like Gecko) Safari/534.6 Pre/1.0",
   "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
   "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
   "curl/8.X.X",
   "Wget/1.X.X",
   "Python-urllib/3.X",
-  "Go-http-client/1.1",
+  "Go-http-client/1.1"
 ];
 
 // 获取随机 User-Agent
-function getRandomUserAgent(): string {
-  const randomIndex = Math.floor(Math.random() * userAgents.length);
-  return userAgents[randomIndex];
-}
-
-// 辅助函数，将字符串转换为一致的颜色
-function stringToColor(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  let color = '#';
-  for (let i = 0; i < 3; i++) {
-    const value = (hash >> (i * 8)) & 0xFF;
-    color += ('00' + value.toString(16)).substr(-2);
-  }
-  return color;
+function getRandomUserAgent() {
+  return userAgents[Math.floor(Math.random() * userAgents.length)];
 }
 
 const apiMapping = {
   "/gemini": "https://generativelanguage.googleapis.com",
-  "/gnothink": "https://generativelanguage.googleapis.com", // 该端点将与 /gemini 合并显示统计
+  "/gnothink": "https://generativelanguage.googleapis.com",
   "/groq": "https://api.groq.com/openai",
   "/gmi": "https://api.gmi-serving.com",
   "/openrouter": "https://openrouter.ai/api",
   "/chutes": "https://llm.chutes.ai",
-  "/nebius": "https://api.studio.nebius.com",
+  "/nebius":"https://api.studio.nebius.com"
 };
 
 // Stats storage
 const stats = {
   total: 0,
   endpoints: {} as Record<string, { total: number; today: number; week: number; month: number }>,
-  requests: [] as Array<{ endpoint: string; timestamp: number }>,
+  requests: [] as Array<{ endpoint: string; timestamp: number }>
 };
 
-// Initialize stats
-for (const endpoint of Object.keys(apiMapping)) {
+// Initialize stats - skip gnothink as it will be merged with gemini
+const endpointKeys = Object.keys(apiMapping);
+for (const endpoint of endpointKeys) {
+  // 跳过 /gnothink，因为它将合并到 /gemini 的统计中
+  if (endpoint === "/gnothink") continue;
+  
   stats.endpoints[endpoint] = {
     total: 0,
     today: 0, // Aggregated count for last 24h
-    week: 0, // Aggregated count for last 7d
-    month: 0, // Aggregated count for last 30d
+    week: 0,  // Aggregated count for last 7d
+    month: 0  // Aggregated count for last 30d
   };
 }
 
 function recordRequest(endpoint) {
   const now = Date.now();
   stats.total++;
-  // 确保端点存在，如果apiMapping在运行时发生变化，stats.endpoints可能没有新加入的端点
-  if (!stats.endpoints[endpoint]) {
-    stats.endpoints[endpoint] = { total: 0, today: 0, week: 0, month: 0 };
+  
+  // 合并 /gemini 和 /gnothink 的统计到 /gemini
+  const mergedEndpoint = endpoint === "/gnothink" ? "/gemini" : endpoint;
+  
+  if (stats.endpoints[mergedEndpoint]) {
+    stats.endpoints[mergedEndpoint].total++;
+  } else {
+    // 如果端点不存在，创建它（理论上不应发生）
+    stats.endpoints[mergedEndpoint] = { total: 1, today: 0, week: 0, month: 0 };
   }
-  stats.endpoints[endpoint].total++;
-  stats.requests.push({ endpoint, timestamp: now });
-
+  
+  stats.requests.push({ endpoint: mergedEndpoint, timestamp: now });
+  
   // Clean up old requests (older than 30 days)
   const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
-  stats.requests = stats.requests.filter((req) => req.timestamp > thirtyDaysAgo);
-
+  stats.requests = stats.requests.filter(req => req.timestamp > thirty極使用DaysAgo);
+  
   updateSummaryStats(); // Update summary stats like today, week, month totals
 }
 
@@ -112,61 +106,15 @@ function updateSummaryStats() {
 }
 
 function generateStatsHTML(request) {
-  updateSummaryStats(); // 确保汇总统计数据是最新的
-
-  // 准备用于显示的统计数据，合并 /gemini 和 /gnothink
-  type EndpointSummary = { total: number; today: number; week: number; month: number; displayName: string };
-  const displayStats: Record<string, EndpointSummary> = {};
-
-  // 首先处理 /gemini 和 /gnothink 的合并
-  const geminiCombinedKey = "/gemini";
-  displayStats[geminiCombinedKey] = {
-    total: 0,
-    today: 0,
-    week: 0,
-    month: 0,
-    displayName: "Gemini",
-  };
-
-  const geminiOriginalStats = stats.endpoints["/gemini"] || { total: 0, today: 0, week: 0, month: 0 };
-  const gnothinkStats = stats.endpoints["/gnothink"] || { total: 0, today: 0, week: 0, month: 0 };
-
-  displayStats[geminiCombinedKey].total = geminiOriginalStats.total + gnothinkStats.total;
-  displayStats[geminiCombinedKey].today = geminiOriginalStats.today + gnothinkStats.today;
-  displayStats[geminiCombinedKey].week = geminiOriginalStats.week + gnothinkStats.week;
-  displayStats[geminiCombinedKey].month = geminiOriginalStats.month + gnothinkStats.month;
-
-  // 处理 apiMapping 中的其他端点
-  for (const endpoint of Object.keys(apiMapping)) {
-    if (endpoint === "/gnothink") {
-      continue; // /gnothink 已经被合并到 /gemini 中，跳过
-    }
-    if (endpoint === "/gemini") {
-      continue; // /gemini 已经被手动处理，跳过以避免重复
-    }
-
-    const epStats = stats.endpoints[endpoint] || { today: 0, week: 0, month: 0, total: 0 };
-    // 根据端点路径生成更友好的显示名称
-    let displayName = endpoint.replace('/', '');
-    if (displayName === 'groq') displayName = 'Groq';
-    else if (displayName === 'gmi') displayName = 'GMI';
-    else if (displayName === 'openrouter') displayName = 'OpenRouter';
-    else if (displayName === 'chutes') displayName = 'Chutes';
-    else if (displayName === 'nebius') displayName = 'Nebius';
-    else {
-      // 首字母大写
-      displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
-    }
-    displayStats[endpoint] = { ...epStats, displayName };
-  }
-
+  updateSummaryStats(); // Ensure summary stats are up-to-date
+  
   return `
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API代理服务器 - 统计面板</title>
+    <title>API代理服务器 - 监控面板</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #5B9CFA; min-height: 100vh; padding: 20px; }
@@ -179,13 +127,22 @@ function generateStatsHTML(request) {
         .stat-card:hover { transform: translateY(-5px); box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15); }
         .stat-card h3 { font-size: 1.2rem; color: #333; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
         .api-icon { width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: white; }
-        .total-icon { background: #6366f1; }
         .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
         .stat-row:last-child { border-bottom: none; }
         .stat-label { color: #666; font-size: 0.9rem; }
         .stat-value { font-size: 1.1rem; font-weight: 600; color: #333; }
-        .refresh-btn { position: fixed; bottom: 30px; right: 30px; background: #6366f1; color: white; border: none; border-radius: 50px; padding: 12px 24px; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3); transition: all 0.3s ease; z-index: 1000; }
-        .refresh-btn:hover { background: #5855eb; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); }
+        .refresh-btn { position: fixed; bottom: 30px; right: 30px; background: #0066cc; color: white; border: none; border-radius: 50px; padding: 12px 24px; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 16px rgba(0, 102, 204, 0.3); transition: all 0.3s ease; z-index: 1000; }
+        .refresh-btn:hover { background: #0052a3; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 102, 204, 0.4); }
+        
+        /* Custom colors for each service */
+        .gemini-icon { background: #4285f4; }
+        .groq-icon { background: #db4437; }
+        .gmi-icon { background: #0f9d58; }
+        .openrouter-icon { background: #f4b400; }
+        .chutes-icon { background: #6e5494; }
+        .nebius-icon { background: #f65314; }
+        .total-icon { background: #6366f1; }
+        
         @media (max-width: 768px) {
             .stats-grid { grid-template-columns: 1fr; }
             .header h1 { font-size: 2rem; }
@@ -194,31 +151,69 @@ function generateStatsHTML(request) {
 </head>
 <body>
     <div class="container">
-        <div class="header"><h1>🚀 API代理服务器</h1><p>实时统计</p></div>
+        <div class="header"><h1>🚀 API代理服务器</h1><p>实时监控面板</p></div>
         
         <div class="stats-grid">
-            ${Object.keys(displayStats).map(key => {
-              const epStats = displayStats[key];
-              const endpointName = epStats.displayName; // 使用友好的显示名称
-              const iconChar = endpointName.substring(0, 1).toUpperCase(); // 使用名称的首字母作为图标字符
-              const iconColor = stringToColor(endpointName); // 使用辅助函数生成一致的图标颜色
+            <!-- 动态生成统计卡片 -->
+            ${Object.keys(stats.endpoints).map(endpoint => {
+              const nameMap = {
+                "/gemini": "Gemini API",
+                "/groq": "Groq API",
+                "/gmi": "GMI API",
+                "/openrouter": "OpenRouter AI",
+                "/chutes": "Chutes AI",
+                "/nebius": "Nebius AI",
+              };
+              
+              const colorMap = {
+                "/gemini": "gemini-icon",
+                "/groq": "groq-icon",
+                "/gmi": "gmi-icon",
+                "/openrouter": "openrouter-icon",
+                "/chutes": "chutes-icon",
+                "/nebius": "nebius-icon",
+              };
+              
+              const displayName = nameMap[endpoint] || endpoint.replace('/', '');
+              const iconChar = endpoint === "/gmi" ? "G" : displayName.charAt(0);
+              const epStats = stats.endpoints[endpoint] || { today: 0, week: 0, month: 0, total: 0 };
+              
               return `
-            <div class="stat-card">
-                <h3><div class="api-icon" style="background: ${iconColor}">${iconChar}</div> ${endpointName} API 调用统计</h3>
-                <div class="stat-row"><span class="stat-label">24小时</span><span class="stat-value">${epStats.today}</span></div>
-                <div class="stat-row"><span class="stat-label">7天</span><span class="stat-value">${epStats.week}</span></div>
-                <div class="stat-row"><span class="stat-label">30天</span><span class="stat-value">${epStats.month}</span></div>
-                <div class="stat-row"><span class="stat-label">总计</span><span class="stat-value">${epStats.total}</span></div>
-            </div>`;
+              <div class="stat-card">
+                <h3>
+                  <div class="api-icon ${colorMap[endpoint] || ''}">${iconChar}</div>
+                  ${displayName} 统计
+                </h3>
+                <div class="stat-row">
+                  <span class="stat-label">24小时</span>
+                  <span class="stat-value">${epStats.today}</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-label">7天</span>
+                  <span class="stat-value">${epStats.week}</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-label">30天</span>
+                  <span class="stat-value">${epStats.month}</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-label">总计</span>
+                  <span class="stat-value">${epStats.total}</span>
+                </div>
+              </div>`;
             }).join('')}
+            
+            <!-- 总体统计 -->
             <div class="stat-card">
                 <h3><div class="api-icon total-icon">📊</div>总体统计</h3>
                 <div class="stat-row"><span class="stat-label">总请求数</span><span class="stat-value">${stats.total}</span></div>
-                <div class="stat-row"><span class="stat-label">活跃端点</span><span class="stat-value">${Object.keys(stats.endpoints).filter(k => stats.endpoints[k].total > 0).length}</span></div>
+                <div class="stat-row"><span class="stat-label">并发服务</span><span class="stat-value">${Object.keys(stats.endpoints).length}</span></div>
                 <div class="stat-row"><span class="stat-label">服务状态</span><span class="stat-value" style="color: #10b981;">🟢 运行中</span></div>
             </div>
         </div>
     </div>
+    
+    <!-- 刷新按钮 -->
     <button class="refresh-btn" onclick="location.reload()">🔄 刷新数据</button>
     
     <script>
@@ -251,55 +246,51 @@ serve(async (request) => {
     updateSummaryStats(); // Make sure summary is up-to-date for the API
     return new Response(JSON.stringify(stats, null, 2), {
       status: 200,
-      headers: {
+      headers: { 
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*", // Allow CORS for stats API
+        "Access-Control-Allow-Origin": "*" // Allow CORS for stats API
       },
     });
   }
-
+  
   // Proxy mode
   if (pathname.startsWith("/proxy/")) {
     try {
+      const fullUrl = url.href;
       // Correctly extract targetUrl, considering potential query params in currentDomain part
       const proxyPathIndex = url.pathname.indexOf("/proxy/");
       const targetUrlString = url.pathname.substring(proxyPathIndex + "/proxy/".length) + url.search + url.hash;
-
+      
       if (!targetUrlString || !targetUrlString.startsWith("http")) {
-        return new Response("Invalid proxy URL. Must start with http:// or https:// after /proxy/", { status: 400 });
+          return new Response("Invalid proxy URL. Must start with http:// or https:// after /proxy/", { status: 400 });
       }
       const targetUrl = new URL(targetUrlString);
       const baseUrl = `${targetUrl.protocol}//${targetUrl.host}`;
 
       const headers = new Headers();
       const allowedHeaders = ["accept", "content-type", "authorization", "user-agent", "accept-encoding", "accept-language", "cache-control", "pragma", "x-requested-with"];
+      
       request.headers.forEach((value, key) => {
-        // 保留允许的头、以 sec- 和 x- 开头的头
         if (allowedHeaders.includes(key.toLowerCase()) || key.toLowerCase().startsWith("sec-") || key.toLowerCase().startsWith("x-")) {
           headers.set(key, value);
         }
       });
-      // 如果请求头中没有 user-agent，则添加一个随机的
+      
+      // 添加随机 User-Agent
       if (!headers.has("user-agent")) {
         headers.set("User-Agent", getRandomUserAgent());
       }
-      // 重写 Referer 头，使其指向目标而不是代理
+      
+      // Crucial for some sites to work, but be mindful of security implications if any
       if (request.headers.has("referer")) {
-        try {
-          const originalReferer = new URL(request.headers.get("referer")!);
-          // 将 referer 的来源替换为目标 URL 的来源
-          headers.set("Referer", originalReferer.href.replace(url.origin, targetUrl.origin));
-        } catch (e) {
-          // 如果 Referer 不合法，则忽略
-          console.warn("Invalid Referer header:", request.headers.get("referer"));
-        }
+        headers.set("Referer", request.headers.get("referer").replace(url.origin, targetUrl.origin));
       }
 
       const response = await fetch(targetUrl.toString(), {
         method: request.method,
         headers: headers,
         body: request.method !== "GET" && request.method !== "HEAD" ? request.body : undefined,
-        redirect: "manual", // Handle redirects manually if needed, or 'follow'
+        redirect: "manual" // Handle redirects manually if needed, or 'follow'
       });
 
       const responseHeaders = new Headers(response.headers);
@@ -310,30 +301,30 @@ serve(async (request) => {
       } else {
         responseHeaders.set("Access-Control-Allow-Origin", "*");
       }
+      
       responseHeaders.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH");
       responseHeaders.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, " + allowedHeaders.join(", "));
-      responseHeaders.set("Access-Control-Max-Age", "86400"); // CORS预检请求缓存时间
-
-      // Security headers (可以根据需要调整)
+      responseHeaders.set("Access-Control-Max-Age", "86400");
+      
+      // Security headers (can be adjusted)
       responseHeaders.set("X-Content-Type-Options", "nosniff");
-      responseHeaders.delete("X-Frame-Options"); // 代理模式下，如果需要嵌入，可能需要删除或设置为 SAMEORIGIN
-      responseHeaders.set("Referrer-Policy", "no-referrer-when-downgrade"); // 常用策略
+      responseHeaders.delete("X-Frame-Options"); // Or set to SAMEORIGIN if proxying own content
+      responseHeaders.set("Referrer-Policy", "no-referrer-when-downgrade"); // Common policy
 
       if (request.method === "OPTIONS") {
         return new Response(null, { status: 204, headers: responseHeaders });
       }
-
-      // 处理 3xx 重定向，重写 Location 头使其通过代理
+      
+      // Handle redirects by rewriting Location header
       if (response.status >= 300 && response.status < 400 && response.headers.has("location")) {
         let newLocation = response.headers.get("location");
+        // If location is relative, prepend the target's base URL
+        if (newLocation && newLocation.startsWith("/")) {
+            newLocation = `${baseUrl}${newLocation}`;
+        }
+        // Rewrite the location to go through the proxy
         if (newLocation) {
-          try {
-            // 解析新的 Location URL，并确保它是绝对路径
-            const resolvedLocation = new URL(newLocation, targetUrl).href;
-            responseHeaders.set("Location", `${url.origin}/proxy/${resolvedLocation}`);
-          } catch (e) {
-            console.warn("Invalid redirect location:", newLocation, e);
-          }
+            responseHeaders.set("Location", `${url.origin}/proxy/${newLocation}`);
         }
         return new Response(null, { status: response.status, headers: responseHeaders });
       }
@@ -341,45 +332,42 @@ serve(async (request) => {
       const contentType = responseHeaders.get("content-type") || "";
       if (contentType.includes("text/html")) {
         let text = await response.text();
+        // Basic HTML rewriting (can be very complex for modern SPAs)
         const currentProxyBase = `${url.origin}/proxy/`;
-        // 基本的 HTML 内容重写 (对于复杂的单页应用可能不够)
-        text = text.replace(/(href|src|action)=["']\/(?!\/)/gi, `$1="${currentProxyBase}${baseUrl}/`); // 处理以 / 开头的相对路径
+        text = text.replace(/(href|src|action)=["']\/(?!\/)/gi, `$1="${currentProxyBase}${baseUrl}/`);
         text = text.replace(/(href|src|action)=["'](https?:\/\/[^"']+)/gi, (match, attr, originalUrl) => {
-          // 处理绝对路径的 URL，将其转换为代理路径
-          return `${attr}="${currentProxyBase}${originalUrl}"`;
+            return `${attr}="${currentProxyBase}${originalUrl}"`;
         });
-        // 重写 srcset (用于响应式图片)
+        // Rewrite srcset
         text = text.replace(/srcset=["']([^"']+)["']/gi, (match, srcset) => {
-          const newSrcset = srcset.split(',').map((s) => {
-            const parts = s.trim().split(/\s+/);
-            let u = parts[0];
-            if (u.startsWith('/')) u = `${baseUrl}${u}`; // 相对路径转绝对路径
-            else if (!u.startsWith('http') && !u.startsWith('data:')) u = `${new URL(u, targetUrl.toString()).href}`; // 尝试解析相对路径
-            return `${currentProxyBase}${encodeURI(u)}${parts[1] ? ' ' + parts[1] : ''}`; // 编码 URL并加上分辨率
-          }).join(', ');
-          return `srcset="${newSrcset}"`;
+            const newSrcset = srcset.split(',').map(s => {
+                const parts = s.trim().split(/\s+/);
+                let u = parts[0];
+                if (u.startsWith('/')) u = `${baseUrl}${u}`;
+                return `${currentProxyBase}${u}${parts[1] ? ' ' + parts[1] : ''}`;
+            }).join(', ');
+            return `srcset="${newSrcset}"`;
         });
-        // 移除 integrity 属性，因为内容已被代理修改，哈希会不匹配
+        // Remove integrity attributes as content is modified
         text = text.replace(/\s+integrity=["'][^"']+["']/gi, '');
-        // 尝试修复 <base href="..."> 标签
+        // Attempt to fix base href if present
         text = text.replace(/<base\s+href=["']([^"']+)["'][^>]*>/gi, (match, baseHrefVal) => {
-          let newBase = baseHrefVal;
-          if (baseHrefVal.startsWith('/')) newBase = `${baseUrl}${baseHrefVal}`;
-          else if (!baseHrefVal.startsWith('http')) newBase = `${new URL(baseHrefVal, targetUrl.toString()).href}`;
-          return `<base href="${currentProxyBase}${newBase}">`;
+            let newBase = baseHrefVal;
+            if(baseHrefVal.startsWith('/')) newBase = `${baseUrl}${baseHrefVal}`;
+            return `<base href="${currentProxyBase}${newBase}">`;
         });
 
         return new Response(text, { status: response.status, headers: responseHeaders });
       } else if (contentType.includes("text/css")) {
         let text = await response.text();
+        // Rewrite url() in CSS
         const currentProxyBase = `${url.origin}/proxy/`;
-        // 重写 CSS 中的 url()
-        text = text.replace(/url\((["']?)([^)"']+)\1\)/gi, (match, quote, cssUrl) => {
-          let u = cssUrl.trim();
-          if (u.startsWith('data:') || u.startsWith('#')) return match; // 跳过 Data URI 和片段标识符
-          if (u.startsWith('/')) u = `${baseUrl}${u}`; // 处理以 / 开头的路径
-          else if (!u.startsWith('http')) u = `${new URL(u, targetUrl.toString()).href}`; // 尝试解析相对路径
-          return `url(${quote}${currentProxyBase}${encodeURI(u)}${quote})`; // 编码 URL
+        text = text.replace(/url\(([^)]+)\)/gi, (match, cssUrl) => {
+            let u = cssUrl.trim().replace(/["']/g, '');
+            if (u.startsWith('data:') || u.startsWith('#')) return match; // Skip data URIs and fragments
+            if (u.startsWith('/')) u = `${baseUrl}${u}`;
+            else if (!u.startsWith('http')) u = `${new URL(u, targetUrl.toString()).href}`; // Resolve relative URLs
+            return `url(${currentProxyBase}${u})`;
         });
         return new Response(text, { status: response.status, headers: responseHeaders });
       }
@@ -396,46 +384,54 @@ serve(async (request) => {
     return new Response("Not Found", { status: 404 });
   }
 
-  recordRequest(prefix); // 记录原始端点，后续统计时再合并
-
+  recordR極使用equest(prefix);
   const targetApiUrl = `${apiMapping[prefix]}${rest}${url.search}`;
 
   try {
     const headers = new Headers();
-    // 转发特定请求头，出于安全考虑需要筛选
-    const commonApiHeaders = ["content-type", "authorization", "accept", "anthropic-version", "user-agent"];
+    // Forward specific headers, be selective for security
+    const commonApiHeaders = ["content-type", "authorization", "accept", "anthropic-version"];
     request.headers.forEach((value, key) => {
-      // 保留允许的头、以 x- 开头的头 (常见的自定义头)
-      if (commonApiHeaders.includes(key.toLowerCase()) || key.toLowerCase().startsWith("x-")) {
-        headers.set(key, value);
-      }
+        if (commonApiHeaders.includes(key.toLowerCase()) || key.toLowerCase().startsWith("x-")) {
+            headers.set(key, value);
+        }
     });
-
-    // 如果请求头中没有 user-agent，则添加一个随机的
-    if (!headers.has("user-agent")) {
-      headers.set("User-Agent", getRandomUserAgent());
-    }
-
-    // 为特定 API 添加必要请求头 (例如 Anthropic API 版本)
+    
+    // Add required headers for specific APIs
     if (prefix === "/claude" && !headers.has("anthropic-version")) {
-      headers.set("anthropic-version", "2023-06-01");
+        headers.set("anthropic-version", "2023-06-01");
+    }
+    
+    // Add random user-agent if not present
+    if (!headers.has("user-agent")) {
+        headers.set("User-Agent", getRandomUserAgent());
     }
 
-    // 处理 gnothink 模式（自动禁用思考模式）
+    // Handle special processing for gnothink
     let requestBody: BodyInit | null = null;
     if (prefix === "/gnothink" && request.method === "POST" && request.body && headers.get("content-type")?.includes("application/json")) {
       const originalBodyText = await request.text();
       if (originalBodyText) {
         const bodyJson = JSON.parse(originalBodyText);
-
-        // 添加 thinkingBudget: 0 来禁用思考模式
+        
+        // Add thinkingBudget: 0 to disable thinking mode
         bodyJson.generationConfig = {
           ...(bodyJson.generationConfig || {}),
           thinkingConfig: {
-            thinkingBudget: 0,
-          },
+            thinkingBudget: 0
+          }
         };
-
+        
+        // Ensure Safety Settings exist if needed
+        if (!bodyJson.safetySettings) {
+          bodyJson.safetySettings = [
+            { category: "HARM_CATEGORY_DANGEROUS", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }
+          ];
+        }
+        
         requestBody = JSON.stringify(bodyJson);
       } else {
         requestBody = null;
@@ -453,12 +449,12 @@ serve(async (request) => {
     const responseHeaders = new Headers(apiResponse.headers);
     responseHeaders.set("Access-Control-Allow-Origin", "*");
     responseHeaders.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH");
-    responseHeaders.set("Access-Control-Allow-Headers", "Content-Type, Authorization, anthropic-version, User-Agent, " + commonApiHeaders.join(", "));
-
-    // 安全响应头
+    responseHeaders.set("Access-Control-Allow-Headers", "Content-Type, Authorization, anthropic-version, " + commonApiHeaders.join(", "));
+    
+    // Security headers
     responseHeaders.set("X-Content-Type-Options", "nosniff");
-    responseHeaders.set("X-Frame-Options", "DENY"); // 禁止 API 响应被内嵌到 iframe
-    responseHeaders.set("Referrer-Policy", "no-referrer"); // 不发送 referrer 信息
+    responseHeaders.set("X-Frame-Options", "DENY"); // APIs shouldn't be framed
+    responseHeaders.set("Referrer-Policy", "no-referrer");
 
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: responseHeaders });
@@ -474,8 +470,7 @@ serve(async (request) => {
   }
 });
 
-// 从路径中提取前缀和剩余部分
-function extractPrefixAndRest(pathname: string, prefixes: string[]): [string | null, string | null] {
+function extractPrefixAndRest(pathname, prefixes) {
   for (const prefix of prefixes) {
     if (pathname.startsWith(prefix)) {
       return [prefix, pathname.slice(prefix.length)];
