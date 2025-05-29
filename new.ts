@@ -25,7 +25,7 @@ function getRandomUserAgent(): string {
   return userAgents[randomIndex];
 }
 
-// 更新 apiMapping，只保留指定模型
+// apiMapping 只保留指定模型
 const apiMapping = {
   "/gemini": "https://generativelanguage.googleapis.com",
   "/gnothink": "https://generativelanguage.googleapis.com",
@@ -106,13 +106,10 @@ function updateSummaryStats() {
 function generateStatsHTML(request: Request) {
   updateSummaryStats(); // Ensure summary stats are up-to-date
   
-  // const url = new URL(request.url); // Not needed since usage guide is removed
-  // const currentDomain = `${url.protocol}//${url.host}; // Not needed
-
-  // 辅助函数，安全获取端点统计数据
+  // Helper function to safely get endpoint stats
   const getEndpointStats = (ep: string) => stats.endpoints[ep] || { today: 0, week: 0, month: 0, total: 0 };
 
-  // 获取模型的相关统计数据
+  // Get stats for relevant models
   const geminiRawStats = getEndpointStats("/gemini");
   const gnothinkRawStats = getEndpointStats("/gnothink");
   const groqStats = getEndpointStats("/groq");
@@ -121,7 +118,7 @@ function generateStatsHTML(request: Request) {
   const chutesStats = getEndpointStats("/chutes");
   const nebiusStats = getEndpointStats("/nebius"); 
 
-  // 组合 Gemini 和 Gnothink 的统计数据用于显示
+  // Combined stats for Gemini and Gnothink
   const combinedGeminiStats = {
       today: geminiRawStats.today + gnothinkRawStats.today,
       week: geminiRawStats.week + gnothinkRawStats.week,
@@ -129,13 +126,19 @@ function generateStatsHTML(request: Request) {
       total: geminiRawStats.total + gnothinkRawStats.total,
   };
 
+  // HTML content is now generated and placed in an artifact above.
+  // This function only needs to pass the stats data to the template if it were a separate file.
+  // Since it's a single file, the template is inline, and we just return the string.
+  // The JS inside the HTML will use the rawStatsData variable directly.
+
+  // For this response, we embed the HTML directly. The artifact is just for display purposes in the UI.
   return `
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API代理服务器 - 实时统计</title> <!-- 更新标题 -->
+    <title>API代理服务器 - 实时统计</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -194,7 +197,7 @@ function generateStatsHTML(request: Request) {
 </head>
 <body>
     <div class="container">
-        <div class="header"><h1>🚀 API代理服务器</h1><p>实时统计</p></div> <!-- 更新描述 -->
+        <div class="header"><h1>🚀 API代理服务器</h1><p>实时统计</p></div>
         
         <div class="chart-section">
             <div class="chart-header">
@@ -219,113 +222,125 @@ function generateStatsHTML(request: Request) {
             <div class="stat-card"><h3><div class="api-icon openrouter-icon">🔗</div>OpenRouter API 调用统计</h3><div class="stat-row"><span class="stat-label">24小时</span><span class="stat-value">${openrouterStats.today}</span></div><div class="stat-row"><span class="stat-label">7天</span><span class="stat-value">${openrouterStats.week}</span></div><div class="stat-row"><span class="stat-label">30天</span><span class="stat-value">${openrouterStats.month}</span></div><div class="stat-row"><span class="stat-label">总计</span><span class="stat-value">${openrouterStats.total}</span></div></div>
             <div class="stat-card"><h3><div class="api-icon chutes-icon">🏹</div>Chutes AI 调用统计</h3><div class="stat-row"><span class="stat-label">24小时</span><span class="stat-value">${chutesStats.today}</span></div><div class="stat-row"><span class="stat-label">7天</span><span class="stat-value">${chutesStats.week}</span></div><div class="stat-row"><span class="stat-label">30天</span><span class="stat-value">${chutesStats.month}</span></div><div class="stat-row"><span class="stat-label">总计</span><span class="stat-value">${chutesStats.total}</span></div></div>
             <div class="stat-card"><h3><div class="api-icon nebius-icon">N</div>Nebius API 调用统计</h3><div class="stat-row"><span class="stat-label">24小时</span><span class="stat-value">${nebiusStats.today}</span></div><div class="stat-row"><span class="stat-label">7天</span><span class="stat-value">${nebiusStats.week}</span></div><div class="stat-row"><span class="stat-label">30天</span><span class="stat-value">${nebiusStats.month}</span></div><div class="stat-row"><span class="stat-label">总计</span><span class="stat-value">${nebiusStats.total}</span></div></div>
-            <div class="stat-card"><h3><div class="api-icon total-icon">📊</div>总体统计</h3><div class="stat-row"><span class="stat-label">总请求数</span><span class="stat-value">${stats.total}</span></div><div class="stat-row"><span class="stat-label">活跃端点</span><span class="stat-value">${Object.keys(stats.endpoints).filter(k => stats.endpoints[k].total > 0).length}</span></div><div class="stat-row"><span class="stat-label">服务状态</span><span class="stat-value" style="color: #10b981;">🟢 运行中</span></div></div>
+             <div class="stat-card"><h3><div class="api-icon total-icon">📊</div>总体统计</div><div class="stat-row"><span class="stat-label">总请求数</span><span class="stat-value">${stats.total}</span></div><div class="stat-row"><span class="stat-label">活跃端点</span><span class="stat-value">${Object.keys(stats.endpoints).filter(k => stats.endpoints[k].total > 0).length}</span></div><div class="stat-row"><span class="stat-label">服务状态</span><span class="stat-value" style="color: #10b981;">🟢 运行中</span></div></div>
         </div>
         
         <!-- 使用说明部分已移除 -->
 
-        <!-- 统计功能说明单独列出 -->
-        <div class="usage-guide"> <!-- 重用 .usage-guide 样式进行分隔 -->
-            <div class="example-section" style="border-top: none; padding-top: 0;">
-                <h3>📊 统计功能说明</h3>
+         <!-- 精简的底部说明 -->
+        <div class="usage-guide">
+             <div class="example-section" style="border-top: none; padding-top: 0;">
+                <h3>ℹ️ 信息提示</h3>
+                <p style="margin-bottom: 8px; color: #666;">此页面仅显示配置的 API 统计。</p>
                 <ul style="margin-left: 20px; color: #666; line-height: 1.6;">
-                    <li>📈 实时统计当前配置的所有API调用次数</li>
-                    <li>📈 支持多时间维度统计（24h/7d/30d/总计）</li>
-                    <li>📈 提供JSON格式统计API: <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">/stats</code></li>
-                    <li>📈 组合图表展示，柱状图+折线图显示数据和趋势</li>
-                    <li>🔄 页面会自动每分钟刷新以获取最新数据</li>
-                </ul>
-            </div>
-            <!-- 代理模式说明也单独列出 -->
-            <div class="example-section">
-                <h3>🌐 通用代理模式说明</h3>
-                 <ul style="margin-left: 20px; color: #666; line-height: 1.6;">
-                   <li>支持完整网页和任意HTTP(s)代理功能（通过 /proxy/ 路径）</li>
-                   <li>自动处理请求和响应头转发（包括 Origin/Referer 重写）</li>
-                   <li>支持CORS跨域请求，并设置安全响应头</li>
-                   <li>具有随机 User-Agent 功能以增强匿名性</li>
-                </ul>
-            </div>
-             <!-- 通用特性说明也单独列出 -->
-            <div class="example-section">
-                <h3>⚡ 通用特性</h3>
-                 <ul style="margin-left: 20px; color: #666; line-height: 1.6;">
-                     <li>⚡️ 支持所有HTTP方法 (GET, POST, PUT, DELETE等)</li>
-                    <li>🚀 自动获取当前域名，无需手动配置</li>
-                     <li>🤐 Gemini NoThink模式：自动为/gnothink请求添加thinkingBudget: 0禁用思考模式</li>
-                     <li>🤖 禁止搜索引擎爬取 (robots.txt)</li>
+                    <li>统计数据包含过去 30 天的请求记录。</li>
+                    <li>页面每分钟自动刷新。</li>
+                    <li>JSON 格式统计 API 地址: <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">/stats</code></li>
+                     <!-- Optional: Add a small note about proxy mode existence -->
+                     <li>此服务也提供通用代理模式，可通过 <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">/proxy/目标URL</code> 路径访问。</li>
                 </ul>
             </div>
         </div>
 
     </div>
     <button class="refresh-btn" onclick="location.reload()">🔄 刷新数据</button>
-    <div id="toast" class="toast"></div>
+    <!-- Toast element kept for potential future use -->
+    <div id="toast" class="toast"></div> 
     
     <script>
+        // The apiMapping object is used here in the frontend to map endpoint keys to display names/colors,
+        // so it needs to be available or derived from rawStatsData.
+        // For simplicity in this single file scenario, we can define it again or iterate rawStatsData keys.
+        // Let's iterate rawStatsData.endpoints for flexibility based on actual stats collected.
+
         const rawStatsData = ${JSON.stringify(stats)};
         let chartInstance = null;
         let currentPeriod = 'today';
-        const barColors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#64748b', '#14b8a6', '#a855f7', '#eab308', '#22c55e', '#3b82f6']; // Sufficient colors
+        // Define colors based on the potential API endpoints in stats.endpoints
+        const baseColors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#64748b', '#14b8a6', '#a855f7', '#eab308', '#22c55e', '#3b82f6'];
+       
+        const endpointColorMap = {
+           'gemini': '#4285f4',
+           'gnothink': '#4285f4', 
+           'groq': '#3d007c',
+           'gmi': '#007bff',
+           'openrouter': '#ff4733',
+           'chutes': '#009688',
+           'nebius': '#6262a0',
+           // Add other expected endpoint colors here
+        };
+
+        // Generate a color list for the 'total' chart based on the actual endpoints present in stats.endpoints
+        const totalChartBarColors = Object.keys(rawStatsData.endpoints)
+             .filter(key => rawStatsData.endpoints[key].total > 0) // Only include endpoints with some data
+             .map((key, index) => {
+                 const simplifiedKey = key.replace('/', '');
+                 return endpointColorMap[simplifiedKey] || baseColors[index % baseColors.length]; // Use map color or fallback
+             });
 
         function getChartDataForPeriod(period, allRequests, endpointDetails) {
             const now = Date.now();
             let labels = [];
             let aggregatedData = [];
 
-            // Filter requests to only include those from mapped endpoints
-            const mappedEndpoints = Object.keys(apiMapping); // Use the defined apiMapping
-            const filteredRequests = allRequests.filter(req => mappedEndpoints.includes(req.endpoint));
+            // Filter requests to only include those from endpoints present in the stats data
+            const availableEndpoints = Object.keys(endpointDetails);
+            const filteredRequests = allRequests.filter(req => availableEndpoints.includes(req.endpoint));
+
+            if (filteredRequests.length === 0) {
+                return { labels: [], data: [], filteredRequestsLength: 0 };
+            }
 
             if (period === 'today') {
-                const hourlyCounts = Array(24).fill(0);
-                const firstHourTimestamp = new Date(now - 23 * 60 * 60 * 1000);
-                firstHourTimestamp.setMinutes(0, 0, 0);
+                 const hourlyCounts = Array(24).fill(0);
+                 const firstHourTimestamp = new Date(now - 23 * 60 * 60 * 1000);
+                 firstHourTimestamp.setMinutes(0, 0, 0);
 
-                for (let i = 0; i < 24; i++) {
-                    const hour = new Date(firstHourTimestamp);
-                    hour.setHours(firstHourTimestamp.getHours() + i);
-                    labels.push(hour.getHours().toString().padStart(2, '0') + ':00');
-                }
+                 for (let i = 0; i < 24; i++) {
+                     const hour = new Date(firstHourTimestamp);
+                     hour.setHours(firstHourTimestamp.getHours() + i);
+                     labels.push(hour.getHours().toString().padStart(2, '0') + ':00');
+                 }
 
-                const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000;
-                filteredRequests.filter(req => req.timestamp >= twentyFourHoursAgo) // Use filtered requests
-                    .forEach(req => {
-                        const reqHour = new Date(req.timestamp);
-                        // Find the correct bucket relative to the firstHourTimestamp
-                        const diffHours = Math.floor((reqHour.getTime() - firstHourTimestamp.getTime()) / (60 * 60 * 1000));
-                        if (diffHours >= 0 && diffHours < 24) {
-                            hourlyCounts[diffHours]++;
-                        }
-                    });
-                aggregatedData = hourlyCounts;
+                 const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000;
+                 filteredRequests.filter(req => req.timestamp >= twentyFourHoursAgo)
+                     .forEach(req => {
+                         const reqHour = new Date(req.timestamp);
+                         const diffHours = Math.floor((reqHour.getTime() - firstHourTimestamp.getTime()) / (60 * 60 * 1000));
+                         if (diffHours >= 0 && diffHours < 24) {
+                             hourlyCounts[diffHours]++;
+                         }
+                     });
+                 aggregatedData = hourlyCounts;
+
             } else if (period === 'week' || period === 'month') {
-                const numDays = period === 'week' ? 7 : 30;
-                const dailyCounts = Array(numDays).fill(0);
-                const firstDayTimestamp = new Date(now);
-                firstDayTimestamp.setDate(firstDayTimestamp.getDate() - (numDays - 1));
-                firstDayTimestamp.setHours(0, 0, 0, 0);
+                 const numDays = period === 'week' ? 7 : 30;
+                 const dailyCounts = Array(numDays).fill(0);
+                 const firstDayTimestamp = new Date(now);
+                 firstDayTimestamp.setDate(firstDayTimestamp.getDate() - (numDays - 1));
+                 firstDayTimestamp.setHours(0, 0, 0, 0);
 
-                for (let i = 0; i < numDays; i++) {
-                    const day = new Date(firstDayTimestamp);
-                    day.setDate(firstDayTimestamp.getDate() + i);
-                    labels.push(day.getFullYear() + '-' + (day.getMonth() + 1).toString().padStart(2, '0') + '-' + day.getDate().toString().padStart(2, '0'));
-                }
-                
-                const periodStartTimestamp = firstDayTimestamp.getTime();
-                 filteredRequests.filter(req => req.timestamp >= periodStartTimestamp) // Use filtered requests
-                    .forEach(req => {
-                        const reqDay = new Date(req.timestamp);
-                        reqDay.setHours(0,0,0,0);
-                        const diffDays = Math.floor((reqDay.getTime() - firstDayTimestamp.getTime()) / (24 * 60 * 60 * 1000));
-                        if (diffDays >= 0 && diffDays < numDays) {
-                           dailyCounts[diffDays]++;
-                        }
-                    });
-                aggregatedData = dailyCounts;
+                 for (let i = 0; i < numDays; i++) {
+                     const day = new Date(firstDayTimestamp);
+                      day.setDate(firstDayTimestamp.getDate() + i);
+                      labels.push(day.getFullYear() + '-' + (day.getMonth() + 1).toString().padStart(2, '0') + '-' + day.getDate().toString().padStart(2, '0'));
+                 }
+                 
+                 const periodStartTimestamp = firstDayTimestamp.getTime();
+                  filteredRequests.filter(req => req.timestamp >= periodStartTimestamp)
+                     .forEach(req => {
+                         const reqDay = new Date(req.timestamp);
+                         reqDay.setHours(0,0,0,0);
+                         const diffDays = Math.floor((reqDay.getTime() - firstDayTimestamp.getTime()) / (24 * 60 * 60 * 1000));
+                         if (diffDays >= 0 && diffDays < numDays) {
+                            dailyCounts[diffDays]++;
+                         }
+                     });
+                 aggregatedData = dailyCounts;
+
             } else if (period === 'total') {
-                // Collect total stats only for endpoints in apiMapping
-                const activeEndpoints = Object.keys(endpointDetails).filter(ep => mappedEndpoints.includes(ep) && endpointDetails[ep].total > 0);
+                const activeEndpoints = Object.keys(endpointDetails).filter(ep => endpointDetails[ep].total > 0);
+                 // Map endpoint keys (like "/gemini") to simplified names (like "gemini") for labels
                 labels = activeEndpoints.map(ep => ep.replace('/', ''));
                 aggregatedData = activeEndpoints.map(ep => endpointDetails[ep].total);
                 // Sort by total count descending for better visualization
@@ -333,24 +348,30 @@ function generateStatsHTML(request: Request) {
                     .sort((a, b) => b.value - a.value);
                  labels = sortedIndexes.map(item => labels[item.index]);
                  aggregatedData = sortedIndexes.map(item => item.value);
-            }
-             // Ensure labels are unique if period is "total" (should be based on distinct endpoints)
-            if (period === 'total') {
-              const uniqueLabels = [];
-              const uniqueData = [];
-               const endpointMap = new Map(); // To handle potential future duplicates if logic changes
-                for(let i=0; i<labels.length; i++) {
-                    if(!endpointMap.has(labels[i])) {
-                         endpointMap.set(labels[i], true);
-                         uniqueLabels.push(labels[i]);
-                         uniqueData.push(aggregatedData[i]);
-                    }
-                }
-                labels = uniqueLabels;
-                aggregatedData = uniqueData;
+                
+                // Ensure labels are unique (should be based on distinct endpoints)
+                const uniqueLabels = [];
+                const uniqueData = [];
+                const endpointMap = new Map();
+                 for(let i=0; i<labels.length; i++) {
+                     if(!endpointMap.has(labels[i])) {
+                          endpointMap.set(labels[i], true);
+                          uniqueLabels.push(labels[i]);
+                          uniqueData.push(aggregatedData[i]);
+                     }
+                 }
+                 labels = uniqueLabels;
+                 aggregatedData = uniqueData;
+
+                 // If total is requested but no endpoint has calls
+                 if (labels.length === 0 && filteredRequests.length > 0) {
+                     // This case shouldn't happen if filteredRequests > 0 and endpointDetails is populated correctly,
+                     // but as a safeguard, return no data if labels somehow end up empty.
+                     return { labels: [], data: [], filteredRequestsLength: filteredRequests.length };
+                 }
             }
 
-            return { labels, data: aggregatedData };
+            return { labels, data: aggregatedData, filteredRequestsLength: filteredRequests.length };
         }
 
         function createCombinedChart(period) {
@@ -359,11 +380,12 @@ function generateStatsHTML(request: Request) {
             
             const chartData = getChartDataForPeriod(period, rawStatsData.requests, rawStatsData.endpoints);
 
-            if (chartData.labels.length === 0) {
+             // Combine check for no data relevant to selected endpoints or period
+            if (chartData.labels.length === 0) { 
                 ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
                 ctx.fillStyle = '#64748b'; ctx.font = '16px Arial'; ctx.textAlign = 'center';
                 ctx.fillText('暂无数据', ctx.canvas.width / 2, ctx.canvas.height / 2);
-                updateLegend(period, { labels: [], barData: [] }); 
+                updateLegend(period, chartData); // Pass chartData for legend logic to show "No Data"
                 return;
             }
             
@@ -379,11 +401,11 @@ function generateStatsHTML(request: Request) {
                             label: 'API调用次数',
                             data: chartData.data,
                              backgroundColor: period === 'total' 
-                                ? chartData.labels.map((_, i) => barColors[i % barColors.length] + 'B3') 
-                                : '#6366f1B3',
+                                ? chartData.labels.map((label, index) => endpointColorMap[label] + 'B3' || totalChartBarColors[index % totalChartBarColors.length] + 'B3') 
+                                : '#6366f1B3', 
                             borderColor: period === 'total' 
-                                ? chartData.labels.map((_, i) => barColors[i % barColors.length])
-                                : '#6366f1',
+                                ? chartData.labels.map((label, index) => endpointColorMap[label] || totalChartBarColors[index % totalChartBarColors.length])
+                                : '#6366f1', 
                             borderWidth: 1.5,
                             yAxisID: 'y',
                             order: 2 
@@ -458,27 +480,26 @@ function generateStatsHTML(request: Request) {
             if (!legendContainer) return; 
             legendContainer.innerHTML = ''; 
 
-            if (chartData.labels.length === 0) {
+             // Check if there is any data to display in the legend for the current period
+            if (chartData.labels.length === 0) { 
                 legendContainer.innerHTML = '<div class="no-data">期间内无调用数据</div>';
                 return;
             }
 
             if (period === 'total') {
                 const totalOverall = chartData.data.reduce((sum, item) => sum + item, 0);
-                // Ensure colors match the sorted data
-                const totalLabelsWithPrefix = Object.keys(apiMapping).filter(ep => stats.endpoints[ep]?.total > 0).map(ep => ep.replace('/', ''));
-                 const sortedLabels = chartData.labels; // Labels are already sorted by value from getChartDataForPeriod
+                // Labels are already sorted by value
+                 const sortedLabels = chartData.labels; 
 
-                 const legendItemsHtml = sortedLabels.map((label, index) => {
-                    const value = chartData.data[index];
+                 const legendItemsHtml = sortedLabels.map((label) => { // No index needed for color mapping
+                    const value = chartData.data[sortedLabels.indexOf(label)]; // Get data value by label
                     const percentage = totalOverall > 0 ? ((value / totalOverall) * 100).toFixed(1) : 0;
                     
-                    // Find the original index of this label to get the correct color
-                     const originalIndex = totalLabelsWithPrefix.indexOf(label);
-                     const colorIndex = originalIndex !== -1 ? originalIndex % barColors.length : 0; // Fallback to 0 if not found
+                    // Get color using the dynamic color map
+                    const color = endpointColorMap[label] || '#64748b'; // Fallback color
 
                     return '<div class="legend-item">' +
-                        '<div class="legend-color" style="background-color: ' + barColors[colorIndex] + '"></div>' +
+                        '<div class="legend-color" style="background-color: ' + color + '"></div>' +
                         '<span>' + label + ': ' + value + ' 次 (' + percentage + '%)</span>' +
                         '</div>';
                 }).join('');
@@ -512,26 +533,16 @@ function generateStatsHTML(request: Request) {
 
         setInterval(() => { location.reload(); }, 60000); // Auto refresh every minute
 
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            if (toast) { 
-                toast.textContent = message; toast.classList.add('show');
-                setTimeout(() => { toast.classList.remove('show'); }, 3000);
-            }
-        }
-
-        // Removed clipboard copy functionality as endpoint links are gone
-
         document.addEventListener('DOMContentLoaded', function() {
             createCombinedChart(currentPeriod);
             document.querySelectorAll('.time-tab').forEach(tab => {
                 tab.addEventListener('click', function() { switchPeriod(this.dataset.period!); }); 
             });
-             // Removed endpoint-item click handler
         });
     </script>
 </body>
-</html>`;
+</html>
+`;
 }
 
 // Deno server logic (serve, recordRequest, apiMapping etc.) remains largely the same
@@ -539,14 +550,15 @@ serve(async (request) => {
   const url = new URL(request.url);
   const pathname = url.pathname;
 
+  // Serve the stats HTML page
   if (pathname === "/" || pathname === "/index.html") {
-    // Pass null for request if not needed in generateStatsHTML, or keep request if origin is derived there
-     return new Response(generateStatsHTML(request), { // generateStatsHTML still uses request to get current domain for stats link
+     return new Response(generateStatsHTML(request), { 
       status: 200,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   }
 
+  // Handle robots.txt
   if (pathname === "/robots.txt") {
     return new Response("User-agent: *\nDisallow: /", {
       status: 200,
@@ -554,6 +566,7 @@ serve(async (request) => {
     });
   }
 
+  // Serve the raw JSON stats data
   if (pathname === "/stats") {
     updateSummaryStats(); // Make sure summary is up-to-date for the API
     return new Response(JSON.stringify(stats, null, 2), {
@@ -565,10 +578,9 @@ serve(async (request) => {
     });
   }
   
-  // Proxy mode - Remains unchanged
+  // Universal Proxy mode
   if (pathname.startsWith("/proxy/")) {
     try {
-        // Correctly extract targetUrl, considering potential query params in currentDomain part
         const proxyPathIndex = url.pathname.indexOf("/proxy/");
         const targetUrlString = url.pathname.substring(proxyPathIndex + "/proxy/".length) + url.search + url.hash;
 
@@ -579,21 +591,80 @@ serve(async (request) => {
         const baseUrl = `${targetUrl.protocol}//${targetUrl.host}`;
 
         const headers = new Headers();
-        const allowedHeaders = ["accept", "content-type", "authorization", "accept-encoding", "accept-language", "cache-control", "pragma", "x-requested-with", "x-forwarded-for", "x-real-ip"]; 
+        // Define allowed headers to forward for proxy mode
+        // Be cautious about which headers you forward from the client
+        const allowedHeaders = [
+            "accept", 
+            "content-type", 
+            "authorization", // Might be needed for some proxied sites, use with care
+            "accept-encoding", 
+            "accept-language", 
+            "cache-control", 
+            "pragma", 
+            "x-requested-with", 
+            "x-forwarded-for", // Add X-Forwarded-For
+            "x-real-ip" // Add X-Real-IP
+        ]; 
+        
         request.headers.forEach((value, key) => {
-            if (allowedHeaders.includes(key.toLowerCase()) || key.toLowerCase().startsWith("sec-") || key.toLowerCase().startsWith("x-")) {
-                headers.set(key, value);
+             // Only forward allowed headers, and commonly used vendor/standard headers
+            if (allowedHeaders.includes(key.toLowerCase()) || key.toLowerCase().startsWith("sec-") || key.toLowerCase().startsWith("x-") || key.toLowerCase().startsWith("http-")) {
+                 // Prevent duplication if adding x-forwarded-for/x-real-ip later
+                 if (!(key.toLowerCase() === 'x-forwarded-for' || key.toLowerCase() === 'x-real-ip')) {
+                     headers.set(key, value);
+                 }
             }
         });
 
+         // Add User-Agent: Forward client's if present, otherwise use random
         if (request.headers.has("user-agent")) {
             headers.set("User-Agent", request.headers.get("user-agent") as string);
         } else {
-            headers.set("User-Agent", getRandomUserAgent());
+            headers.set("User-Agent", getRandomUserAgent()); // Fallback to random
         }
+        
+         // Add X-Forwarded-For and X-Real-IP with client's IP
+        headers.set("X-Forwarded-For", request.conn.remoteAddr.hostname);
+        headers.set("X-Real-IP", request.conn.remoteAddr.hostname);
 
+        // Rewrite Referer header if present
         if (request.headers.has("referer")) {
-            headers.set("Referer", request.headers.get("referer")!.replace(url.origin, targetUrl.origin));
+             const clientReferer = request.headers.get("referer")!;
+             // Only rewrite if the referer comes from this proxy itself
+             if (clientReferer.startsWith(url.origin)) {
+                // Attempt to derive the original intended referer URL
+                try {
+                    const oldRefererUrl = new URL(clientReferer);
+                    const oldProxyPathIndex = oldRefererUrl.pathname.indexOf("/proxy/");
+                    if (oldProxyPathIndex !== -1) {
+                         const originalRefererTarget = oldRefererUrl.pathname.substring(oldProxyPathIndex + "/proxy/".length) + oldRefererUrl.search + oldRefererUrl.hash;
+                         // Ensure it's a http/https URL before setting
+                         if (originalRefererTarget.startsWith("http")) {
+                             headers.set("Referer", originalRefererTarget);
+                         } else {
+                              // If unable to parse or not http, maybe use the target origin?
+                              headers.set("Referer", targetUrl.origin);
+                         }
+                    } else {
+                         // If referer from this origin but not a /proxy/ path, still use target origin
+                         headers.set("Referer", targetUrl.origin);
+                    }
+                } catch (e) {
+                     // If Referer URL from client is malformed, just set target origin
+                     console.warn("Malformed client Referer header:", clientReferer, "Error:", e);
+                     headers.set("Referer", targetUrl.origin);
+                }
+                
+             } else {
+                 // If referer is from an external site, just pass it through (or decide to remove it based on policy)
+                 headers.set("Referer", clientReferer);
+             }
+        } else {
+             // If no referer from client, decide whether to set one (e.g., target origin) or omit
+             // Setting target origin can help some sites function, but leaks target info
+             // Omitting is more private
+             // Let's omit if absent from client
+              console.debug("No Referer header from client for proxy request.");
         }
 
         const response = await fetch(targetUrl.toString(), {
@@ -604,6 +675,7 @@ serve(async (request) => {
         });
 
         const responseHeaders = new Headers(response.headers);
+        // Set CORS headers for proxy mode
         const origin = request.headers.get("Origin");
         if (origin) {
             responseHeaders.set("Access-Control-Allow-Origin", origin);
@@ -611,42 +683,63 @@ serve(async (request) => {
         } else {
             responseHeaders.set("Access-Control-Allow-Origin", "*");
         }
-        responseHeaders.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH");
-        responseHeaders.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, " + allowedHeaders.join(", ")); // Ensure allowedHeaders are included
+        // Reflect allowed methods and headers
+        const allowedMethods = "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH";
+        const allowedHeadersForCors = "Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Real-IP, HTTP-Referer, X-Title, " + allowedHeaders.join(", ");
+        responseHeaders.set("Access-Control-Allow-Methods", allowedMethods);
+        responseHeaders.set("Access-Control-Allow-Headers", allowedHeadersForCors);
         responseHeaders.set("Access-Control-Max-Age", "86400");
 
+        // Security headers
         responseHeaders.set("X-Content-Type-Options", "nosniff");
+        // For proxying arbitrary sites, X-Frame-Options: DENY might break intended framing.
+        // Consider removing it, or setting to SAMEORIGIN if you control the proxied site.
+        // Removing for maximum flexibility in proxying.
         responseHeaders.delete("X-Frame-Options"); 
-        responseHeaders.set("Referrer-Policy", "no-referrer-when-downgrade"); 
+        // Referrer-Policy for responses - usually safer to be strict
+        responseHeaders.set("Referrer-Policy", "no-referrer"); 
 
+        // Handle CORS preflight
         if (request.method === "OPTIONS") {
             return new Response(null, { status: 204, headers: responseHeaders });
         }
-
+        
+        // Handle redirects by rewriting Location header
         if (response.status >= 300 && response.status < 400 && response.headers.has("location")) {
             let newLocation = response.headers.get("location");
-            if (newLocation && newLocation.startsWith("/")) {
-                newLocation = `${baseUrl}${newLocation}`;
-            }
-            if (newLocation) {
-                responseHeaders.set("Location", `${url.origin}/proxy/${newLocation}`);
-            }
+             if (newLocation) {
+                try {
+                   const redirectUrl = new URL(newLocation, targetUrl.toString()); // Resolve against the *target* URL
+                    // Rewrite the location to go through *this* proxy's /proxy/ path
+                   responseHeaders.set("Location", `${url.origin}/proxy/${redirectUrl.toString()}`);
+                } catch (e) {
+                   console.error("Failed to rewrite redirect Location header:", newLocation, "Error:", e);
+                   // If rewrite fails, fall back to original location or error
+                   responseHeaders.set("Location", newLocation); // Keep original as fallback
+                }
+             }
             return new Response(null, { status: response.status, headers: responseHeaders });
         }
 
+        // Basic HTML and CSS rewriting
         const contentType = responseHeaders.get("content-type") || "";
         if (contentType.includes("text/html")) {
             let text = await response.text();
             const currentProxyBase = `${url.origin}/proxy/`;
+             // This rewriting is basic and might fail on complex SPAs.
+             // Consider using a dedicated HTML parser/rewriter for robust solutions.
             text = text.replace(/(href|src|action)=["']\/(?!\/)/gi, `$1="${currentProxyBase}${baseUrl}/`);
             text = text.replace(/(href|src|action)=["'](https?:\/\/[^"']+)/gi, (match, attr, originalUrl) => {
-                return `${attr}="${currentProxyBase}${originalUrl}"`;
+                // Avoid double proxying if URL is already proxied
+                if (originalUrl.startsWith(currentProxyBase)) return match; 
+                 return `${attr}="${currentProxyBase}${originalUrl}"`;
             });
             text = text.replace(/srcset=["']([^"']+)["']/gi, (match, srcset) => {
                 const newSrcset = srcset.split(',').map(s => {
                     const parts = s.trim().split(/\s+/);
                     let u = parts[0];
                     if (u.startsWith('/')) u = `${baseUrl}${u}`;
+                     if (u.startsWith(currentProxyBase)) return s; // Avoid double proxying
                     return `${currentProxyBase}${u}${parts[1] ? ' ' + parts[1] : ''}`;
                 }).join(', ');
                 return `srcset="${newSrcset}"`;
@@ -655,88 +748,132 @@ serve(async (request) => {
             text = text.replace(/<base\s+href=["']([^"']+)["'][^>]*>/gi, (match, baseHrefVal) => {
                 let newBase = baseHrefVal;
                 if(baseHrefVal.startsWith('/')) newBase = `${baseUrl}${baseHrefVal}`;
+                // Rewrite base href to point through the proxy
                 return `<base href="${currentProxyBase}${newBase}">`;
             });
+             // Remove CSP header as rewriting might violate it
+             responseHeaders.delete("Content-Security-Policy");
+             responseHeaders.delete("Transfer-Encoding"); // Ensure no Transfer-Encoding header after reading body
 
             return new Response(text, { status: response.status, headers: responseHeaders });
         } else if (contentType.includes("text/css")) {
             let text = await response.text();
             const currentProxyBase = `${url.origin}/proxy/`;
-            text = text.replace(/url\(([^)]+)\)/gi, (match, cssUrl) => {
-                let u = cssUrl.trim().replace(/["']/g, '');
+             // Rewrite url() in CSS
+            text = text.replace(/url\((["']?)([^)"']+)\1\)/gi, (match, quote, cssUrl) => {
+                let u = cssUrl;
                 if (u.startsWith('data:') || u.startsWith('#')) return match; 
-                if (u.startsWith('/')) u = `${baseUrl}${u}`;
-                else if (!u.startsWith('http')) u = `${new URL(u, targetUrl.toString()).href}`; 
-                return `url(${currentProxyBase}${u})`;
+                
+                try {
+                    // Resolve the URL relative to the target CSS file's URL
+                    const resolvedUrl = new URL(u, targetUrl.toString());
+                    // Rewrite to proxy URL
+                    return `url(${quote}${currentProxyBase}${resolvedUrl.toString()}${quote})`;
+                } catch (e) {
+                     console.warn("Failed to rewrite CSS URL:", u, "Error:", e);
+                     return match; // Keep original if rewrite fails
+                }
             });
+             responseHeaders.delete("Transfer-Encoding"); // Ensure no Transfer-Encoding header after reading body
+
             return new Response(text, { status: response.status, headers: responseHeaders });
+
+        } else {
+             // For other content types (images, JSON, etc.), simply forward the body and headers
+              responseHeaders.delete("Transfer-Encoding"); // Avoid issues with chunked encoding after reading body
+            return new Response(response.body, { status: response.status, headers: responseHeaders });
         }
 
-        return new Response(response.body, { status: response.status, headers: responseHeaders });
     } catch (error) {
         console.error("Proxy request failed:", error.message, error.stack);
         return new Response("Proxy Request Failed: " + error.message, { status: 502 }); 
     }
 }
 
+  // API Proxy mode
   const [prefix, rest] = extractPrefixAndRest(pathname, Object.keys(apiMapping));
   if (!prefix) {
     return new Response("Not Found", { status: 404 });
   }
 
-  recordRequest(prefix);
+  recordRequest(prefix); // Record only successful mapping attempts
+
   const targetApiUrl = `${apiMapping[prefix]}${rest}${url.search}`;
 
   try {
     const headers = new Headers();
+    // Define allowed headers to forward for API mode
     const commonApiHeaders = ["content-type", "authorization", "accept"];
     request.headers.forEach((value, key) => {
+         // Forward allowed common headers and vendor/custom headers that start with x- or http-
         if (commonApiHeaders.includes(key.toLowerCase()) || key.toLowerCase().startsWith("x-") || key.toLowerCase().startsWith("http-")) { 
             headers.set(key, value);
         }
     });
     
+     // Set random User-Agent for API mode
     headers.set("User-Agent", getRandomUserAgent());
 
+    // Handle special processing for gnothink
     let requestBody: BodyInit | null = null;
+    // Check for POST method, presence of body, and correct content type
     if (prefix === "/gnothink" && request.method === "POST" && request.body && headers.get("content-type")?.includes("application/json")) {
-      const originalBodyText = await request.text();
-      if (originalBodyText) {
-        const bodyJson = JSON.parse(originalBodyText);
-        
-        bodyJson.generationConfig = {
-          ...(bodyJson.generationConfig || {}),
-          thinkingConfig: {
-            thinkingBudget: 0
-          }
-        };
-        
-        requestBody = JSON.stringify(bodyJson);
-      } else {
-        requestBody = null;
-      }
+       try {
+           // Read the body text
+           const originalBodyText = await request.text();
+            if (originalBodyText) {
+                 // Parse JSON, add thinkingBudget, stringify again
+                const bodyJson = JSON.parse(originalBodyText);
+                
+                bodyJson.generationConfig = {
+                ...(bodyJson.generationConfig || {}),
+                thinkingConfig: {
+                    thinkingBudget: 0
+                }
+                };
+                
+                requestBody = JSON.stringify(bodyJson);
+            } else {
+                 requestBody = null; // Empty body
+            }
+       } catch (e) {
+           console.error("Failed to process /gnothink body:", e);
+           // If JSON parsing or processing fails, maybe return a client error?
+           // Or just forward the original body if possible/safe.
+           // For now, let's return an error to prevent sending malformed requests.
+           return new Response("Invalid JSON body for /gnothink", { status: 400 });
+       }
     } else if (request.method !== "GET" && request.method !== "HEAD" && request.body) {
+       // For other non-GET/HEAD methods with a body, just forward the stream
       requestBody = request.body;
     }
 
     const apiResponse = await fetch(targetApiUrl, {
       method: request.method,
       headers: headers,
-      body: requestBody,
+      body: requestBody, // Use the potentially modified body
     });
 
     const responseHeaders = new Headers(apiResponse.headers);
+    // Set CORS headers for API mode
     responseHeaders.set("Access-Control-Allow-Origin", "*");
     responseHeaders.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH");
-    responseHeaders.set("Access-Control-Allow-Headers", "Content-Type, Authorization, " + commonApiHeaders.join(", ") + ", X-Requested-With, X-Forwarded-For, X-Real-IP, HTTP-Referer, X-Title");
+    // Update Access-Control-Allow-Headers to match the headers we forward
+    const allowedHeadersForApiCors = "Content-Type, Authorization, anthropic-version, X-Requested-With, X-Forwarded-For, X-Real-IP, HTTP-Referer, X-Title, " + commonApiHeaders.join(", ");
+    responseHeaders.set("Access-Control-Allow-Headers", allowedHeadersForApiCors);
     
+    // Security headers - usually stricter for API endpoints not meant for browsers
     responseHeaders.set("X-Content-Type-Options", "nosniff");
     responseHeaders.set("X-Frame-Options", "DENY"); 
     responseHeaders.set("Referrer-Policy", "no-referrer");
 
+    // Handle CORS preflight for API mode
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: responseHeaders });
     }
+
+     // Remove Transfer-Encoding as我们已经消费/处理了 body (in gnothink case) or will stream it
+     responseHeaders.delete("Transfer-Encoding");
 
     return new Response(apiResponse.body, {
       status: apiResponse.status,
@@ -744,12 +881,16 @@ serve(async (request) => {
     });
   } catch (error) {
     console.error("API proxy fetch failed:", error);
+    // Provide a more informative error response
     return new Response("Internal Server Error during API proxy: " + (error instanceof Error ? error.message : String(error)), { status: 500 });
   }
 });
 
+// Helper function to extract the API prefix and the rest of the path
 function extractPrefixAndRest(pathname: string, prefixes: string[]) {
-  for (const prefix of prefixes) {
+  // Sort prefixes by length desc to match e.g., /gnothink before /gemini
+  const sortedPrefixes = [...prefixes].sort((a, b) => b.length - a.length);
+  for (const prefix of sortedPrefixes) {
     if (pathname.startsWith(prefix)) {
       return [prefix, pathname.slice(prefix.length)];
     }
