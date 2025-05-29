@@ -1,4 +1,4 @@
-import { serve } from \"https://deno.land/std/http/server.ts\";
+import { serve } from "https://deno.land/std/http/server.ts";
 
 // 定义一个 User-Agent 字符串的列表
 const userAgents = [
