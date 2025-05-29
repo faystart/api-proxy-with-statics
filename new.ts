@@ -1,582 +1,327 @@
-import { serve } from "https://deno.land/std/http/server.ts";
+import { serve } from "https://deno.land/std@v0.215.0/http/server.ts"; // 更新 Deno 标准库版本，与 code 1 保持一致
 
-// 定义一个 User-Agent 字符串的列表
-const userAgents = [
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15",
-  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-  "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:102.0) Gecko/20100101 Firefox/102.0",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:102.0) Gecko/20100101 Firefox/102.0",
-  "Mozilla/5.0 (iPad; CPU OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-  "Mozilla/5.0 (WebOS/2.2.4; U; en-US) AppleWebKit/534.6 (KHTML, like Gecko) Safari/534.6 Pre/1.0",
-  "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
-  "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
-  "curl/8.X.X",
-  "Wget/1.X.X",
-  "Python-urllib/3.X",
-  "Go-http-client/1.1",
-];
+console.log("Deno Proxy Server Started with Random User Agent & TLS Proxying 🚀");
 
-// 获取随机 User-Agent
-function getRandomUserAgent(): string {
-  const randomIndex = Math.floor(Math.random() * userAgents.length);
-  return userAgents[randomIndex];
-}
-
-// apiMapping 只保留指定模型
+// ✅ 支持的 API 映射
 const apiMapping = {
+  "/discord": "https://discord.com/api",
+  "/telegram": "https://api.telegram.org",
+  "/openai": "https://api.openai.com",
+  "/claude": "https://api.anthropic.com",
   "/gemini": "https://generativelanguage.googleapis.com",
-  "/gnothink": "https://generativelanguage.googleapis.com",
+  "/gnothink": "https://generativelanguage.googleapis.com", // 注意：此路径会自动禁用 Gemini 的思考模式
+  "/meta": "https://www.meta.ai/api",
   "/groq": "https://api.groq.com/openai",
-  '/gmi': 'https://api.gmi-serving.com',
-  '/openrouter': 'https://openrouter.ai/api',
-  '/chutes': 'https://llm.chutes.ai',
-  '/nebius':'https://api.studio.nebius.com'
+  "/xai": "https://api.x.ai",
+  "/cohere": "https://api.cohere.ai",
+  "/huggingface": "https://api-inference.huggingface.co",
+  "/together": "https://api.together.xyz",
+  "/novita": "https://api.novita.ai",
+  "/portkey": "https://api.portkey.ai",
+  "/fireworks": "https://api.fireworks.ai",
+  "/openrouter": "https://openrouter.ai/api",
+  // 额外添加 code 1 中的一些映射（可选，根据需求保留或删除）
+  "/gmi": "https://api.gmi-serving.com", 
+  "/chutes": "https://llm.chutes.ai"
 };
 
-// Stats storage
-const stats = {
-  total: 0, // Total includes all requests, including proxy
-  endpoints: {} as Record<string, { total: number; today: number; week: number; month: number }>, // Stats only for mapped API endpoints
-  requests: [] as Array<{ endpoint: string; timestamp: number }> // Raw requests within a time window for aggregation
-};
+/**
+ * 🌐 生成随机 User-Agent（Chrome/Firefox/Safari/Edge/移动端）
+ * 从第一个代码段整合过来
+ */
+function getRandomUserAgent(): string {
+  const uaList = [
+    // Chrome 123-124（Windows、Mac、Linux）
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
 
-// Initialize stats for the initially defined apiMapping endpoints
-// This ensures that even if an endpoint has 0 calls, it appears in stats.endpoints
-for (const endpoint of Object.keys(apiMapping)) {
-  stats.endpoints[endpoint] = {
-    total: 0,
-    today: 0, 
-    week: 0,  
-    month: 0  
-  };
+    // Firefox 124-125
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15; rv:125.0) Gecko/20100101 Firefox/125.0",
+
+    // Safari 17（Mac & iOS）
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
+    "Mozilla/5.0 (iPad; CPU OS 17_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+
+    // Microsoft Edge
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 Edg/123.0.2420.81",
+
+    // Android 移动端浏览器
+    "Mozilla/5.0 (Linux; Android 10; SM-G975F Build/QP1A.190711.020) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Linux; Android 13; Pixel 7 Build/TD1A.220624.011) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36",
+
+    // iPhone/iPad Safari 浏览器
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPad; CPU OS 16_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.4 Mobile/15E148 Safari/604.1",
+
+    // Opera 浏览器
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 OPR/106.0.0.0",
+
+    // Brave 浏览器
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 Edg/123.0.2420.81 Brave/1.58.61",
+
+    // Vivaldi 浏览器
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Vivaldi/6.5.3213.10"
+  ];
+
+  return uaList[Math.floor(Math.random() * uaList.length)];
 }
 
-// Function to record a request for a specific endpoint
-function recordRequest(endpoint: string) {
-  const now = Date.now();
-  stats.total++; // Increment overall total
-  
-  // Check if the endpoint is one of the mapped API endpoints
-  if (Object.keys(apiMapping).includes(endpoint)) {
-      // If it is a mapped API endpoint, record its stats
-      if (!stats.endpoints[endpoint]) {
-           // This case should ideall not be needed if initialization runs over all apiMapping keys,
-           // but as a safeguard if recordRequest is somehow called for a mapped key not initialized yet.
-           console.warn(`Initializing stats for mapped endpoint dynamically: ${endpoint}`);
-           stats.endpoints[endpoint] = { total: 0, today: 0, week: 0, month: 0 };
-      }
-      stats.endpoints[endpoint].total++; // Increment total for this specific endpoint
-       // We don't record proxy requests here, only API requests for mapped endpoints
-       stats.requests.push({ endpoint, timestamp: now }); 
-  } else {
-      // Optionally log requests to non-mapped paths (like /proxy/ or missing paths)
-      // console.debug(`Request to unmapped path: ${endpoint}`); // Too noisy perhaps
-      // We don't record these in stats.endpoints or stats.requests array
-  }
-
-  // Clean up old requests from the requests array (older than 30 days)
-  const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
-  stats.requests = stats.requests.filter(req => req.timestamp > thirtyDaysAgo);
-  
-  // Update time-windowed summary stats for all *mapped* endpoints
-  updateSummaryStats();
-}
-
-// Function to recalculate today/week/month stats
-function updateSummaryStats() {
-  const now = Date.now();
-  const oneDayAgo = now - (24 * 60 * 60 * 1000);
-  const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
-  const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
-
-  // Reset aggregated counts for all endpoints that exist in stats.endpoints
-  // This includes both initially mapped and dynamically added ones (if any were added)
-  for (const endpointKey of Object.keys(stats.endpoints)) {
-     // Ensure the endpointKey is still in apiMapping before resetting time-windowed stats?
-     // No, the requirement is to show stats for endpoints "in apiMapping".
-     // The initialization and recordRequest ensures only mapped endpoints get into stats.endpoints initially.
-     // So, we reset all currently tracked endpoints.
-    stats.endpoints[endpointKey].today = 0;
-    stats.endpoints[endpointKey].week = 0;
-    stats.endpoints[endpointKey].month = 0;
-  }
-
-  // Recalculate based on the filtered requests array (which only contains mapped API calls)
-  for (const req of stats.requests) {
-    const endpointStats = stats.endpoints[req.endpoint];
-    // This check should always pass if requests only contains mapped endpoints
-    if (!endpointStats) {
-        console.warn(`Request logged for endpoint not found in current stats.endpoints structure: ${req.endpoint}`);
-        continue; 
-    } 
-
-    if (req.timestamp > oneDayAgo) {
-      endpointStats.today++;
-    }
-    if (req.timestamp > sevenDaysAgo) {
-      endpointStats.week++;
-    }
-    if (req.timestamp > thirtyDaysAgo) {
-      endpointStats.month++;
-    }
-  }
-}
-
-// Minimal HTML generation function
-function generateStatsHTML() {
-  updateSummaryStats(); // Ensure summary stats are up-to-date before embedding
-
-  // Embed the entire stats object as a JSON string in the HTML script
-  const statsJsonString = JSON.stringify(stats);
-
-  // Use standard string concatenation for the outer HTML template
-  // This avoids Deno trying to interpret the inner JavaScript's template literals.
-  return '<!DOCTYPE html>\n' +
-    '<html lang="zh-CN">\n' +
-    '<head>\n' +
-    '    <meta charset="UTF-8">\n' +
-    '    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
-    '    <title>API代理服务器 - 24小时统计</title>\n' +
-    '    <style>' + // Start of <style> block
-    '        body { \n' +
-    '            font-family: sans-serif; \n' +
-    '            background-color: #f0f0f0; \n' +
-    '            color: #333; \n' +
-    '            line-height: 1.6; \n' +
-    '            margin: 20px;\n' +
-    '            text-align: center;\n' +
-    '        }\n' +
-    '        .container { \n' +
-    '            max-width: 600px; \n' +
-    '            margin: 40px auto; \n' +
-    '            background-color: #fff; \n' +
-    '            padding: 20px; \n' +
-    '            border-radius: 8px; \n' +
-    '            box-shadow: 0 2px 4px rgba(0,0,0,0.1); \n' +
-    '            text-align: left;\n' +
-    '        }\n' +
-    '        h1 { \n' +
-    '            text-align: center; \n' +
-    '            color: #555; \n' +
-    '            margin-bottom: 20px;\n' +
-    '        }\n' +
-    '        ul {\n' +
-    '            list-style: none;\n' +
-    '            padding: 0;\n' +
-    '        }\n' +
-    '        li {\n' +
-    '            padding: 8px 0;\n' +
-    '            border-bottom: 1px solid #eee;\n' +
-    '            display: flex;\n' +
-    '            justify-content: space-between;\n' +
-    '        }\n' +
-    '        li:last-child {\n' +
-    '            border-bottom: none;\n' +
-    '        }\n' +
-    '        .endpoint-name {\n' +
-    '            font-weight: bold;\n' +
-    '        }\n' +
-    '        .stats-value {\n' +
-    '            color: #007bff;\n' +
-    '        }\n' +
-    '         .info-footer {\n' +
-    '            font-size: 0.9em;\n' +
-    '            color: #777;\n' +
-    '            margin-top: 20px;\n' +
-    '            text-align: center;\n' +
-    '        }\n' +
-    '    </style>\n' + // End of <style> block
-    '</head>\n' +
-    '<body>\n' +
-    '    <div class="container">\n' +
-    '        <h1>API代理服务器 - 24小时统计</h1>\n' +
-    '        <ul id="stats-list">\n' +
-    '            <!-- Stats will be loaded here by JavaScript -->\n' +
-    '            <li>加载中...</li>\n' +
-    '        </ul>\n' +
-    '        <div class="info-footer">\n' +
-    '            <p>显示过去 24 小时的请求数。</p>\n' +
-    '            <p>数据每分钟自动刷新。</p>\n' +
-    '             <p>完整 JSON 统计 API 地址: <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">/stats</code></p>\n' +
-    '        </div>\n' +
-    '    </div>\n' +
-    '\n' +
-    '    <script>\n' +
-    '        // Raw stats data embedded from backend\n' +
-    '        const rawStatsData = ' + statsJsonString + ';\n' + // Embed the JSON string here
-    '        const statsList = document.getElementById(\'stats-list\');\n' +
-    '\n' +
-    '        function renderStats(statsData) {\n' +
-    '            statsList.innerHTML = \'\'; // Clear previous content\n' +
-    '            const endpoints = statsData.endpoints;\n' +
-    '            const endpointKeys = Object.keys(endpoints).sort(); // Sort endpoints alphabetically by key\n' +
-    '\n' +
-    '            if (endpointKeys.length === 0) {\n' +
-    '                 statsList.innerHTML = \'<li>暂无统计数据</li>\';\n' +
-    '                 return;\n' +
-    '            }\n' +
-    '\n' +
-    '            endpointKeys.forEach(key => { // \'key\' is defined in the loop\'s scope\n' +
-    '                const endpointStats = endpoints[key]; // \'endpointStats\' is defined in the loop\'s scope\n' +
-    '                if (endpointStats) {\n' +
-    '                    const listItem = document.createElement(\'li\');\n' +
-    '                    // Use standard string concatenation for innerHTML\n' +
-    '                    // This avoids Deno trying to interpret a template literal meant for the browser.\n' +
-    '                    listItem.innerHTML = \'<span class="endpoint-name">\' + key + \'</span>\' +\n' +
-    '                                         \'<span>24h: <span class="stats-value">\' + endpointStats.today + \'</span></span>\';\n' +
-    '                    statsList.appendChild(listItem);\n' +
-    '                }\n' +
-    '            });\n' +
-    '        }\n' +
-    '\n' +
-    '        // Initial render using the embedded rawStatsData\n' +
-    '        if (typeof rawStatsData !== \'undefined\') { // Check if rawStatsData was successfully embedded
-    '             renderStats(rawStatsData);' +
-    '        } else {' +
-    '             statsList.innerHTML = \'<li>Error loading stats data.</li>\';' +
-    '             console.error("rawStatsData is not defined.");' +
-    '        }\n' +
-    '\n' +
-    '        // Auto refresh every minute\n' +
-    '        setInterval(() => { location.reload(); }, 60000);\n' +
-    '\n' +
-    '    </script>\n' +
-    '</body>\n' +
-    '</html>';
-}
-
-// Deno server logic
-serve(async (request) => {
+/**
+ * 🔄 请求处理器
+ */
+serve(async (request: Request): Promise<Response> => {
   const url = new URL(request.url);
   const pathname = url.pathname;
+  const search = url.search;
 
-  // Serve the minimal stats HTML page on / or /index.html
-  if (pathname === "/" || pathname === "/index.html") {
-     return new Response(generateStatsHTML(), { 
+  console.log(`[REQ] ${request.method} ${pathname}${search}`); // 记录传入请求
+
+  // ✅ 根路径或 index.html 返回一个简单的状态页面
+  if (pathname === '/' || pathname === '/index.html') {
+    return new Response("Deno TLS Proxy Server Running 🚀", {
       status: 200,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   }
 
-  // Handle robots.txt
-  if (pathname === "/robots.txt") {
+  // ✅ robots.txt 策略
+  if (pathname === '/robots.txt') {
     return new Response("User-agent: *\nDisallow: /", {
       status: 200,
       headers: { "Content-Type": "text/plain" },
     });
   }
 
-  // Serve the raw JSON stats data
-  if (pathname === "/stats") {
-    updateSummaryStats(); // Make sure summary is up-to-date for the API
-    // We expose summary stats (today, week, month, total for each mapped endpoint)
-    // And a sample of recent raw requests (within 30d) for mapped endpoints.
-    const mappedEndpoints = Object.keys(apiMapping);
-    const relevantRequests = stats.requests.filter(req => mappedEndpoints.includes(req.endpoint));
-
-    return new Response(JSON.stringify({
-        totalRequestsAllTime: stats.total,
-        summaryStats: stats.endpoints, 
-        recentRequestsSample: relevantRequests 
-    }, null, 2), {
-      status: 200,
-      headers: { 
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*" 
-      },
-    });
-  }
-  
-  // Universal Proxy mode (remains functional as requested in previous turns)
-  // It does NOT record stats in stats.endpoints or stats.requests.
+  // ✅ 代理模式 (/proxy/https://example.com)
   if (pathname.startsWith("/proxy/")) {
     try {
-        const proxyPathIndex = url.pathname.indexOf("/proxy/");
-        const targetUrlString = url.pathname.substring(proxyPathIndex + "/proxy/".length) + url.search + url.hash;
+      const proxyPathIndex = pathname.indexOf("/proxy/");
+      const targetUrlString = pathname.substring(proxyPathIndex + "/proxy/".length) + search + url.hash; // 拼装完整目标 URL
 
-        if (!targetUrlString || !targetUrlString.startsWith("http")) {
-            return new Response("Invalid proxy URL. Must start with http:// or https:// after /proxy/", { status: 400 });
+      if (!targetUrlString || !targetUrlString.startsWith("http")) {
+        console.warn(`[ERR] Invalid proxy URL: ${targetUrlString}`);
+        return new Response("Invalid proxy URL. Must start with http:// or https:// after /proxy/", { status: 400 });
+      }
+      const targetUrl = new URL(targetUrlString);
+      const baseUrl = `${targetUrl.protocol}//${targetUrl.host}`;
+
+      console.log(`👉 Proxying (Web): ${targetUrl.toString()}`); // 记录代理目标
+
+      const headers = new Headers();
+      // 转发部分常用请求头，但 User-Agent 将被覆盖
+      const allowedHeaders = ["accept", "content-type", "authorization", "accept-encoding", "accept-language", "cache-control", "pragma", "x-requested-with", "cookie"];
+      request.headers.forEach((value, key) => {
+        if (allowedHeaders.includes(key.toLowerCase()) || key.toLowerCase().startsWith("sec-") || key.toLowerCase().startsWith("x-")) {
+          headers.set(key, value);
         }
-        const targetUrl = new URL(targetUrlString);
-        // No need to record proxy requests in stats.endpoints
-        stats.total++; // Increment overall total count if desired for total, but not per endpoint
-        
-        const baseUrl = `${targetUrl.protocol}//${targetUrl.host}`;
+      });
+      // 移除 Host 头，避免目标服务器验证失败
+      if (headers.has("Host")) headers.delete("Host");
 
-        const headers = new Headers();
-        const allowedHeaders = [
-            "accept", 
-            "content-type", 
-            "authorization", 
-            "accept-encoding", 
-            "accept-language", 
-            "cache-control", 
-            "pragma", 
-            "x-requested-with", 
-        ]; 
-        
-        request.headers.forEach((value, key) => {
-            if (allowedHeaders.includes(key.toLowerCase()) || key.toLowerCase().startsWith("sec-") || key.toLowerCase().startsWith("x-") || key.toLowerCase().startsWith("http-")) { 
-                 if (!(key.toLowerCase() === 'x-forwarded-for' || key.toLowerCase() === 'x-real-ip')) {
-                     headers.set(key, value);
-                 }
-            }
+      // 🌐 始终使用随机 User-Agent
+      headers.set("User-Agent", getRandomUserAgent());
+
+      // 处理 Referer 头，将其重写为目标域，避免泄露代理信息
+      if (request.headers.has("referer")) {
+        headers.set("Referer", request.headers.get("referer")!.replace(url.origin, targetUrl.origin));
+      }
+
+      const response = await fetch(targetUrl.toString(), {
+        method: request.method,
+        headers: headers,
+        body: request.method !== "GET" && request.method !== "HEAD" ? request.body : undefined,
+        redirect: "manual" // 手动处理重定向
+      });
+
+      const responseHeaders = new Headers(response.headers);
+      // 允许跨域
+      const origin = request.headers.get("Origin");
+      if (origin) {
+        responseHeaders.set("Access-Control-Allow-Origin", origin);
+        responseHeaders.set("Access-Control-Allow-Credentials", "true");
+      } else {
+        responseHeaders.set("Access-Control-Allow-Origin", "*");
+      }
+      responseHeaders.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH");
+      responseHeaders.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, " + allowedHeaders.join(", "));
+      responseHeaders.set("Access-Control-Max-Age", "86400"); // 缓存 CORS 预检请求
+
+      // 安全头部（根据需求调整）
+      responseHeaders.set("X-Content-Type-Options", "nosniff");
+      responseHeaders.delete("X-Frame-Options"); // 代理外部内容时通常需要删除
+      responseHeaders.set("Referrer-Policy", "no-referrer-when-downgrade");
+
+      if (request.method === "OPTIONS") {
+        return new Response(null, { status: 204, headers: responseHeaders });
+      }
+
+      // 处理重定向：重写 Location 头使其通过代理
+      if (response.status >= 300 && response.status < 400 && response.headers.has("location")) {
+        let newLocation = response.headers.get("location");
+        if (newLocation) {
+          // 如果是相对路径，转换为绝对路径
+          if (newLocation.startsWith("/")) {
+            newLocation = `${baseUrl}${newLocation}`;
+          }
+          // 重写 Location 头，确保重定向也通过代理服务器
+          responseHeaders.set("Location", `${url.origin}/proxy/${newLocation}`);
+        }
+        return new Response(null, { status: response.status, headers: responseHeaders });
+      }
+
+      // HTML 和 CSS 内容重写（非常基础，复杂网站可能需要更强大的解析器）
+      const contentType = responseHeaders.get("content-type") || "";
+      if (contentType.includes("text/html")) {
+        let text = await response.text();
+        const currentProxyBase = `${url.origin}/proxy/`;
+        text = text.replace(/(href|src|action)=["']\/(?!\/)/gi, `$1="${currentProxyBase}${baseUrl}/`);
+        text = text.replace(/(href|src|action)=["'](https?:\/\/[^"']+)/gi, (match, attr, originalUrl) => {
+          return `${attr}="${currentProxyBase}${originalUrl}"`;
         });
-
-        if (request.headers.has("user-agent")) {
-            headers.set("User-Agent", request.headers.get("user-agent") as string);
-        } else {
-            headers.set("User-Agent", getRandomUserAgent());
-        }
-        
-        headers.set("X-Forwarded-For", request.conn.remoteAddr.hostname);
-        headers.set("X-Real-IP", request.conn.remoteAddr.hostname);
-
-        if (request.headers.has("referer")) {
-             const clientReferer = request.headers.get("referer")!;
-             if (clientReferer.startsWith(url.origin)) {
-                try {
-                    const oldRefererUrl = new URL(clientReferer);
-                    const oldProxyPathIndex = oldRefererUrl.pathname.indexOf("/proxy/");
-                    if (oldProxyPathIndex !== -1) {
-                         const originalRefererTarget = oldRefererUrl.pathname.substring(oldProxyPathIndex + "/proxy/".length) + oldRefererUrl.search + oldRefererUrl.hash;
-                         if (originalRefererTarget.startsWith("http")) {
-                             headers.set("Referer", originalRefererTarget);
-                         } else {
-                              headers.set("Referer", targetUrl.origin);
-                         }
-                    } else {
-                         headers.set("Referer", targetUrl.origin);
-                    }
-                } catch (e) {
-                     console.warn("Malformed client Referer header:", clientReferer, "Error:", e);
-                     headers.set("Referer", targetUrl.origin);
-                }
-                
-             } else {
-                 headers.set("Referer", clientReferer);
-             }
-        } else {
-              console.debug("No Referer header from client for proxy request.");
-        }
-
-        const response = await fetch(targetUrl.toString(), {
-            method: request.method,
-            headers: headers,
-            body: request.method !== "GET" && request.method !== "HEAD" ? request.body : undefined,
-            redirect: "manual" 
+        text = text.replace(/srcset=["']([^"']+)["']/gi, (match, srcset) => {
+          const newSrcset = srcset.split(',').map(s => {
+            const parts = s.trim().split(/\s+/);
+            let u = parts[0];
+            if (u.startsWith('/')) u = `${baseUrl}${u}`;
+            return `${currentProxyBase}${u}${parts[1] ? ' ' + parts[1] : ''}`;
+          }).join(', ');
+          return `srcset="${newSrcset}"`;
         });
+        text = text.replace(/\s+integrity=["'][^"']+["']/gi, ''); // 移除完整性属性
+        text = text.replace(/<base\s+href=["']([^"']+)["'][^>]*>/gi, (match, baseHrefVal) => {
+            let newBase = baseHrefVal;
+            if(baseHrefVal.startsWith('/')) newBase = `${baseUrl}${baseHrefVal}`;
+            return `<base href="${currentProxyBase}${newBase}">`;
+        });
+        return new Response(text, { status: response.status, headers: responseHeaders });
+      } else if (contentType.includes("text/css")) {
+        let text = await response.text();
+        const currentProxyBase = `${url.origin}/proxy/`;
+        text = text.replace(/url\(([^)]+)\)/gi, (match, cssUrl) => {
+          let u = cssUrl.trim().replace(/["']/g, '');
+          if (u.startsWith('data:') || u.startsWith('#')) return match;
+          if (u.startsWith('/')) u = `${baseUrl}${u}`;
+          else if (!u.startsWith('http')) u = `${new URL(u, targetUrl.toString()).href}`;
+          return `url(${currentProxyBase}${u})`;
+        });
+        return new Response(text, { status: response.status, headers: responseHeaders });
+      }
 
-        const responseHeaders = new Headers(response.headers);
-        const origin = request.headers.get("Origin");
-        if (origin) {
-            responseHeaders.set("Access-Control-Allow-Origin", origin);
-            responseHeaders.set("Access-Control-Allow-Credentials", "true");
-        } else {
-            responseHeaders.set("Access-Control-Allow-Origin", "*");
-        }
-        const allowedMethods = "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH";
-        const allowedHeadersForCors = "Content-Type, Authorization, X-Requested-With, X-Forwarded-For, X-Real-IP, HTTP-Referer, X-Title, " + allowedHeaders.join(", ");
-        responseHeaders.set("Access-Control-Allow-Methods", allowedMethods);
-        responseHeaders.set("Access-Control-Allow-Headers", allowedHeadersForCors);
-        responseHeaders.set("Access-Control-Max-Age", "86400");
-
-        responseHeaders.set("X-Content-Type-Options", "nosniff");
-        responseHeaders.delete("X-Frame-Options"); 
-        responseHeaders.set("Referrer-Policy", "no-referrer"); 
-
-        if (request.method === "OPTIONS") {
-            return new Response(null, { status: 204, headers: responseHeaders });
-        }
-        
-        if (response.status >= 300 && response.status < 400 && response.headers.has("location")) {
-            let newLocation = response.headers.get("location");
-             if (newLocation) {
-                try {
-                   const redirectUrl = new URL(newLocation, targetUrl.toString()); 
-                   responseHeaders.set("Location", `${url.origin}/proxy/${redirectUrl.toString()}`);
-                } catch (e) {
-                   console.error("Failed to rewrite redirect Location header:", newLocation, "Error:", e);
-                   responseHeaders.set("Location", newLocation); 
-                }
-             }
-            return new Response(null, { status: response.status, headers: responseHeaders });
-        }
-
-        const contentType = responseHeaders.get("content-type") || "";
-        if (contentType.includes("text/html")) {
-            let text = await response.text();
-            const currentProxyBase = `${url.origin}/proxy/`;
-            text = text.replace(/(href|src|action)=["']\/(?!\/)/gi, `$1="${currentProxyBase}${baseUrl}/`);
-            text = text.replace(/(href|src|action)=["'](https?:\/\/[^"']+)/gi, (match, attr, originalUrl) => {
-                if (originalUrl.startsWith(currentProxyBase)) return match; 
-                 return `${attr}="${currentProxyBase}${originalUrl}"`;
-            });
-            text = text.replace(/srcset=["']([^"']+)["']/gi, (match, srcset) => {
-                const newSrcset = srcset.split(',').map(s => {
-                    const parts = s.trim().split(/\s+/);
-                    let u = parts[0];
-                    if (u.startsWith('/')) u = `${baseUrl}${u}`;
-                     if (u.startsWith(currentProxyBase)) return s; 
-                    return `${currentProxyBase}${u}${parts[1] ? ' ' + parts[1] : ''}`;
-                }).join(', ');
-                return `srcset="${newSrcset}"`;
-            });
-            text = text.replace(/\s+integrity=["'][^"']+["']/gi, '');
-            text = text.replace(/<base\s+href=["']([^"']+)["'][^>]*>/gi, (match, baseHrefVal) => {
-                let newBase = baseHrefVal;
-                if(baseHrefVal.startsWith('/')) newBase = `${baseUrl}${baseHrefVal}`;
-                return `<base href="${currentProxyBase}${newBase}">`;
-            });
-             responseHeaders.delete("Content-Security-Policy");
-             responseHeaders.delete("Transfer-Encoding");
-
-            return new Response(text, { status: response.status, headers: responseHeaders });
-        } else if (contentType.includes("text/css")) {
-            let text = await response.text();
-            const currentProxyBase = `${url.origin}/proxy/`;
-            text = text.replace(/url\((["']?)([^)"']+)\1\)/gi, (match, quote, cssUrl) => {
-                let u = cssUrl;
-                if (u.startsWith('data:') || u.startsWith('#')) return match; 
-                
-                try {
-                    const resolvedUrl = new URL(u, targetUrl.toString());
-                    return `url(${quote}${currentProxyBase}${resolvedUrl.toString()}${quote})`;
-                } catch (e) {
-                     console.warn("Failed to rewrite CSS URL:", u, "Error:", e);
-                     return match; 
-                }
-            });
-             responseHeaders.delete("Transfer-Encoding");
-
-            return new Response(text, { status: response.status, headers: responseHeaders });
-
-        } else {
-              responseHeaders.delete("Transfer-Encoding");
-            return new Response(response.body, { status: response.status, headers: responseHeaders });
-        }
+      return new Response(response.body, { status: response.status, headers: responseHeaders });
 
     } catch (error) {
-        console.error("Proxy request failed:", error.message, error.stack);
-        return new Response("Proxy Request Failed: " + error.message, { status: 502 }); 
+      console.error(`🆘 Proxy Error (Web): ${error.message}`);
+      return new Response("Proxy Request Failed: " + error.message, { status: 502 }); // Bad Gateway
     }
-}
+  }
 
-  // API Proxy mode
-  // Extract the prefix based on the defined apiMapping keys
+  // ✅ API 路由匹配
   const [prefix, rest] = extractPrefixAndRest(pathname, Object.keys(apiMapping));
-
-  // If the pathname doesn't match any defined API prefix or the /proxy/ prefix, return 404
   if (!prefix) {
+    console.log(`[404] API Route not found: ${pathname}`);
     return new Response("Not Found", { status: 404 });
   }
 
-  // Record the request only if it matches a mapped API endpoint
-  recordRequest(prefix); 
+  // 构造目标 API URL
+  const targetApiUrl = `${apiMapping[prefix]}${rest}${search}`;
+  console.log(`👉 Proxying (API): ${targetApiUrl}`); // 记录 API 代理目标
 
-  // Construct the target URL for the upstream API
-  // Remove the leading slash from 'rest' if it exists, to avoid double slashes in target URL
-  const targetApiUrl = `${apiMapping[prefix]}${rest}`; // rest includes leading slash if not root
-  
   try {
     const headers = new Headers();
-    const commonApiHeaders = ["content-type", "authorization", "accept"];
+    // 转发特定请求头
+    const commonApiHeaders = ["content-type", "authorization", "accept", "anthropic-version", "x-api-key"]; // 增加 x-api-key
     request.headers.forEach((value, key) => {
-        if (commonApiHeaders.includes(key.toLowerCase()) || key.toLowerCase().startsWith("x-") || key.toLowerCase().startsWith("http-")) { 
-            headers.set(key, value);
-        }
+      if (commonApiHeaders.includes(key.toLowerCase()) || key.toLowerCase().startsWith("x-")) {
+        headers.set(key, value);
+      }
     });
-    
-     // Always use a random User-Agent for API proxy requests
+
+    // 移除 Host 头，避免目标服务器验证失败
+    if (headers.has("Host")) {
+        headers.delete("Host");
+    }
+
+    // 🌐 始终为 API 请求设置随机 User-Agent
     headers.set("User-Agent", getRandomUserAgent());
 
+    // 为特定 API 添加必要头部
+    if (prefix === "/claude" && !headers.has("anthropic-version")) {
+      headers.set("anthropic-version", "2023-06-01"); // Claude API 要求此版本头
+    }
+
+    // 处理 gnothink（Gemini 禁用思考模式） 逻辑
     let requestBody: BodyInit | null = null;
-    // Special handling for gnothink endpoint to add thinkingBudget: 0
     if (prefix === "/gnothink" && request.method === "POST" && request.body && headers.get("content-type")?.includes("application/json")) {
-       try {
-           const originalBodyText = await request.text();
-            if (originalBodyText) {
-                const bodyJson = JSON.parse(originalBodyText);
-                
-                bodyJson.generationConfig = {
-                ...(bodyJson.generationConfig || {}),
-                thinkingConfig: {
-                    thinkingBudget: 0
-                }
-                };
-                
-                requestBody = JSON.stringify(bodyJson);
-            } else {
-                 requestBody = null;
+      const originalBodyText = await request.text();
+      if (originalBodyText) {
+        try {
+          const bodyJson = JSON.parse(originalBodyText);
+          // 添加 thinkingBudget: 0 禁用思考模式
+          bodyJson.generationConfig = {
+            ...(bodyJson.generationConfig || {}),
+            thinkingConfig: {
+              thinkingBudget: 0
             }
-       } catch (e) {
-           console.error("Failed to process /gnothink body:", e);
-           return new Response("Invalid JSON body for /gnothink", { status: 400 });
-       }
+          };
+          requestBody = JSON.stringify(bodyJson);
+        } catch (parseError) {
+          console.error(`[ERR] Failed to parse JSON for /gnothink: ${parseError.message}`);
+          requestBody = originalBodyText; // 如果解析失败，尝试转发原始 body
+        }
+      } else {
+        requestBody = null;
+      }
     } else if (request.method !== "GET" && request.method !== "HEAD" && request.body) {
-       // For other non-GET/HEAD methods with a body, just forward the stream
+      // 其他 POST/PUT 请求直接转发原始 body
       requestBody = request.body;
     }
 
-    // Fetch from the target API
     const apiResponse = await fetch(targetApiUrl, {
       method: request.method,
       headers: headers,
-      body: requestBody, 
+      body: requestBody,
     });
 
-    // Prepare response headers for the client
     const responseHeaders = new Headers(apiResponse.headers);
-    // Set CORS headers
+    // 允许跨域
     responseHeaders.set("Access-Control-Allow-Origin", "*");
     responseHeaders.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH");
-    const allowedHeadersForApiCors = "Content-Type, Authorization, anthropic-version, X-Requested-With, X-Forwarded-For, X-Real-IP, HTTP-Referer, X-Title, " + commonApiHeaders.join(", ");
-    responseHeaders.set("Access-Control-Allow-Headers", allowedHeadersForApiCors);
-    
-    // Set security headers
-    responseHeaders.set("X-Content-Type-Options", "nosniff");
-    responseHeaders.set("X-Frame-Options", "DENY"); 
-    responseHeaders.set("Referrer-Policy", "no-referrer");
+    responseHeaders.set("Access-Control-Allow-Headers", "Content-Type, Authorization, anthropic-version, x-api-key, " + commonApiHeaders.join(", "));
 
-    // Handle CORS preflight
+    // 安全头部
+    responseHeaders.set("X-Content-Type-Options", "nosniff");
+    responseHeaders.set("X-Frame-Options", "DENY"); // API 不应被嵌入
+    responseHeaders.set("Referrer-Policy", "no-referrer"); // 避免泄露代理信息
+
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: responseHeaders });
     }
 
-     responseHeaders.delete("Transfer-Encoding");
-
-    // Return the response from the upstream API to the client
     return new Response(apiResponse.body, {
       status: apiResponse.status,
       headers: responseHeaders,
     });
+
   } catch (error) {
-    console.error("API proxy fetch failed:", error);
-    return new Response("Internal Server Error during API proxy: " + (error instanceof Error ? error.message : String(error)), { status: 500 });
+    console.error(`🆘 Proxy Error (API): ${targetApiUrl} - Reason: ${error.message}`);
+    return new Response("Internal Server Error during API proxy: " + error.message, { status: 500 });
   }
 });
 
-// Helper function to extract the longest matching prefix and the rest of the pathname
-function extractPrefixAndRest(pathname: string, prefixes: string[]) {
-  // Sort prefixes by length descending to ensure `/gnothink` matches before `/gemini`
-  const sortedPrefixes = [...prefixes].sort((a, b) => b.length - a.length);
-  for (const prefix of sortedPrefixes) {
+/**
+ * 🔎 路由匹配：从路径中提取 API 前缀和剩余部分
+ */
+function extractPrefixAndRest(pathname: string, prefixes: string[]): [string | null, string] {
+  for (const prefix of prefixes) {
     if (pathname.startsWith(prefix)) {
-      return [prefix, pathname.slice(prefix.length)];
+      const rest = pathname.slice(prefix.length);
+      // 确保剩余部分为空或以 '/' 开头，避免 /openai_v2 匹配到 /openai
+      if (!rest || rest.startsWith('/')) { 
+        return [prefix, rest || ""];
+      }
     }
   }
-  // Also check the /proxy/ prefix
-   if (pathname.startsWith("/proxy/")) {
-       return ["/proxy/", pathname.slice("/proxy/".length)];
-   }
-
-  return [null, null]; // No matching prefix found
+  return [null, null]; // 类型适配为 [string | null, string | null]
 }
-
-console.log("🚀 API代理服务器已启动 (Deno)");
-console.log("🌐 统计面板可访问 http://localhost:8000/"); // Default Deno port
-console.log("📊 JSON统计数据可访问 http://localhost:8000/stats");
-console.log("🕒 统计页面数据每分钟自动刷新");
